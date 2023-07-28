@@ -13,17 +13,17 @@ Francesco Sudoso, matricola: 1808353
 
 ```
 git clone https://github.com/Pancio-code/Project-Data-Management.git
-cd Project-Data-Management/
+cd Project-Data-Management/flask/
 
 In the terminal write:
 
 pip install flask
-python main.py
+python app.py
 ```
 
-## Libraries used:
+## Debug Mode:
 
-TOD
+if want active flask debug mode add in flask folder .DEBUG_MODE_ON empty file, otherwise delete it.
 
 ## Report
 
