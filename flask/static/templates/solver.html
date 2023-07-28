@@ -19,19 +19,22 @@
       type="image/x-icon"
     />
     <script src="{{ url_for('static', filename='js/d3.js') }}"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
   </head>
 
   <body>
-    <form id="schedule_form" action="/" method="post">
+    <form id="form_with_schedule" onsubmit="submitForm(event)">
       Schedule:<br />
-      <input type="text" name="schedule" id="input_schedule" size="80" />
+      <input type="text" name="schedule" id="input_with_schedule" size="80" />
       <br /><br />
       <input type="checkbox" name="use_xl_only" id="input_checkbox" />Use
       <i>only</i> exclusive locks <br /><br />
       <input type="submit" value="Go" />
-      <input type="reset" value="Clear" />
+      <input type="reset" id="clear_button" value="Clear" />
     </form>
-    <!---->
+
+    <div id="response-container"></div>
+    <!-- SOLUTION -->
   </body>
 </html>
