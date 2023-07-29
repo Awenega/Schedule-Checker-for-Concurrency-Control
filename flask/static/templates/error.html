@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Transaction Checker: 404</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css"
+      integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+    <link
+      rel="shortcut icon"
+      href="{{ url_for('static', filename='images/favicon.ico') }}"
+      type="image/x-icon"
+    />
+    <link
+      rel="icon"
+      href="{{ url_for('static', filename='images/favicon.ico') }}"
+      type="image/x-icon"
+    />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="{{ url_for('static', filename='js/instruction.js') }}"></script>
+  </head>
+
+  <body>
+    <div class="container center-container">
+      <div class="instruction-container">
+        <h2 class="text-center pb-4">
+          <i class="fa-solid fa-triangle-exclamation"></i> Wrong URL
+        </h2>
+        <p>
+          You try to access a wrong URL, obtaining an error 404, return to home
+          clicking on below button:
+        </p>
+        <button
+          type="button"
+          class="btn btn-default px-3 sapienza-button"
+          id="home"
+        >
+          <i class="fa-solid fa-house icon-of-page"></i>
+          Home
+        </button>
+      </div>
+    </div>
+  </body>
+</html>

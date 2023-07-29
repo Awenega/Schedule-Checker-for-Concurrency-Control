@@ -19,6 +19,11 @@ def instruction():
     return render_template('instruction.html')
 
 
+@app.errorhandler(404)
+def page_not_found(eror):
+    return render_template('error.html')
+
+
 @app.route('/solve', methods=['POST'])
 def solve():
     # Get and check arguments from the request
