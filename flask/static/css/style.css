@@ -1,0 +1,81 @@
+body {
+    background-color: #f1f1f1; /* Nice background color */
+  }
+
+  .center-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+  }
+
+  .form-container {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    max-width: 400px;
+    width: 100%;
+  }
+
+  .instruction-container {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    max-width: 400px;
+    width: 100%;
+  }
+
+  .response-container {
+    margin-top: 20px;
+  }
+
+  .tutorial {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+  }
+
+  .home {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+  }
+
+ .sapienza-button {
+    color: #883844;
+    border-color: #883844;
+    background-color: white;
+  }
+
+  .sapienza-button .icon-of-page{
+    color: #883844;
+  }
+
+  .sapienza-button:hover {
+    background-color: #883844;
+    color: white;
+    border-color: white;
+  }
+
+  .sapienza-button:hover .icon-of-page {
+    color: white;
+  }
+
+  #response-container {
+    border-top: solid 2px #883844;
+  }
+
+  .author-section {
+    border-top: solid 2px #883844;
+  }
+
+  .instruction-list {
+    list-style: none;
+    padding-left: 0;
+  }
+
+  .instruction-list li {
+    padding-bottom: 1rem;
+  }

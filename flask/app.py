@@ -14,6 +14,11 @@ def index():
     return render_template('solver.html')
 
 
+@app.route('/instruction', methods=['GET'])
+def instruction():
+    return render_template('instruction.html')
+
+
 @app.route('/solve', methods=['POST'])
 def solve():
     # Get and check arguments from the request

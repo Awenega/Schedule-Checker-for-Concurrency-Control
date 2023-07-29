@@ -20,4 +20,8 @@ $(document).ready(function () {
     $("#clear_button").click(function () {
         $("#response-container").empty();
     });
+    $(".tutorial").click(function () {
+        // Replace the URL with the destination page URL
+        window.location.href = "/instruction";
+    });
 });

@@ -1,6 +1,7 @@
 
-from __future__ import print_function  #compatibility python2
+from __future__ import print_function  # compatibility python2
 from operation import Operation
+
 
 def parse_schedule(sched):
     """
@@ -14,11 +15,11 @@ def parse_schedule(sched):
     schedule = []
 
     i = 0
-    last_ops = dict()  #save last operation for each transaction
+    last_ops = dict()  # save last operation for each transaction
 
     try:
         while i < len(sched):
-            t, tx, o = None, None, None 
+            t, tx, o = None, None, None
 
             # get operation type 't'
             if sched[i] == 'r':
@@ -35,7 +36,7 @@ def parse_schedule(sched):
             if tx == '':
                 return _sched_malformed_err()
             i = i+tx_end+1
-            
+
             # get operation object 'o'
             o_end = sched[i:].find(')')
             o = sched[i:i+o_end]
@@ -43,19 +44,17 @@ def parse_schedule(sched):
                 return _sched_malformed_err()
             i = i+o_end+1
 
+            operation = Operation(t, tx, o)  # operation object
 
-            operation = Operation(t,tx,o)  #operation object
-
-            last_ops[tx] = operation    #save operation as last for transaction tx
-            schedule.append(operation)  #append operation to schedule
-
+            # save operation as last for transaction tx
+            last_ops[tx] = operation
+            schedule.append(operation)  # append operation to schedule
 
         # Set final operations for each transaction
         for op in last_ops.values():
             op.tx_continues = False
 
         return schedule
-
 
     except ValueError:
         return _sched_malformed_err()
@@ -70,21 +69,17 @@ def _sched_malformed_err(msg=None):
     return msg+help_msg
 
 
-
-
-
 def format_schedule(sched):
     """
-    Formats a schedule (as list of Operations) for printing in HTML
+    Formats a sch edule (as list of Operations) for printing in HTML
     """
     s = ''
     for op in sched:
-        if op.type!='READ' and op.type!='WRITE':
+        if op.operation_type != 'READ' and op.operation_type != 'WRITE':
             s += '<b>'+str(op)+' </b>'
         else:
             s += str(op)+' '
     return s+'\n'
-
 
 
 # test schedules
@@ -102,5 +97,3 @@ TEST_SCHEDULES = [
     'r1(A)r2(B)r3(C)w1(B)w2(C)w3(A)',
     'r6(A)r8(A)r9(A)w8(A)w11(A)r10(A)'
 ]
-
-

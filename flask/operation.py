@@ -1,38 +1,38 @@
-
-
 class Operation:
     """
     Class describing an operation of the schedule
     """
-    def __init__(self, type, trans, obj):
-        if type==None or trans==None or obj==None:
+
+    def __init__(self, operation_type, id_transaction, object):
+        if operation_type is None or id_transaction is None or object is None:
             raise ValueError
 
-        self.type = str(type)  #can be either READ, WRITE, UNLOCKED, SHARED_L, XCLUSIVE_L
-        self.transaction = str(trans)  #identifier of the transaction executing this operation
-        self.obj = str(obj)  #object on which this operation is executed
+        # can be either READ, WRITE, UNLOCKED, SHARED_L, XCLUSIVE_L
+        self.operation_type = str(operation_type)
+        # identifier of the id_transactionaction executing this operation
+        self.id_transaction = str(id_transaction)
+        # objectect on which this operation is executed
+        self.object = str(object)
 
-        # Boolean telling if this operation is the last performed by transaction 'trans'
+        # Boolean telling if this operation is the last performed by id_transactionaction 'id_transaction'
         # It is False if it is the last one, True otherwise. It will be set accordingly by 'parse_schedule'
         self.tx_continues = True
 
-
     def __str__(self):
-        if self.type == 'READ':
+        if self.operation_type == 'READ':
             s = 'r'
-        elif self.type == 'WRITE':
+        elif self.operation_type == 'WRITE':
             s = 'w'
-        elif self.type == 'UNLOCKED':
-            s='u'
-        elif self.type == 'SHARED_L':
-            s='sl'
-        elif self.type == 'XCLUSIVE_L':
-            s='xl'
+        elif self.operation_type == 'UNLOCKED':
+            s = 'u'
+        elif self.operation_type == 'SHARED_L':
+            s = 'sl'
+        elif self.operation_type == 'XCLUSIVE_L':
+            s = 'xl'
         else:
-            print('WARNING: op type not recognized')
-            s = self.type
-        return s+self.transaction+'('+self.obj+')'
+            print('WARNING: op operation_type not recognized')
+            s = self.operation_type
+        return s+self.id_transaction+'('+self.object+')'
 
-    def __repr__(self):  #debugging
+    def __repr__(self):  # debugging
         return self.__str__()
-
