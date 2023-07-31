@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template
+from flask import Flask, jsonify, request, render_template
 
 # Import functions from other files
 from check2PL import solve2PL
@@ -20,7 +20,7 @@ def instruction():
 
 
 @app.errorhandler(404)
-def page_not_found(eror):
+def page_not_found(error):
     return render_template('error.html')
 
 
@@ -51,8 +51,15 @@ def solve():
         return errors_in_schedule
 
     response = ''
+
+    # Format results for conflict serializability
+    msg = '<b><i>Schedule provided: </i></b><br>'
+    msg += schedule
+    response += '<br>' + msg + '<br>'
+
     # Solve for conflict serializability, 2PL, and timestamps
-    res_confl = solveConflict(sched_parsed)
+    res_confl, precedence_graph = solveConflict(sched_parsed)
+
     res_2pl = solve2PL(sched_parsed, use_xl_only)
     res_ts = solveTimestamps(sched_parsed)
 
@@ -86,7 +93,25 @@ def solve():
         msg += res_ts['err'] + '<br>'
         response += '<br>' + msg + '<br>'
 
-    return response
+    response_solve = {
+        'data': response,
+        'precedence_graph': precedence_graph
+    }
+
+    return jsonify(response_solve)
+
+
+@app.route('/get_precedence_graph', methods=['POST'])
+def get_precedence_graph():
+    # ... your existing code ...
+
+    # Solve for conflict serializability and get the precedence graph
+    res_confl, precedence_graph = solveConflict(sched_parsed)
+
+    # ... your existing code ...
+
+    # Return the precedence graph data as JSON
+    return jsonify(precedence_graph=precedence_graph)
 
 
 if __name__ == "__main__":

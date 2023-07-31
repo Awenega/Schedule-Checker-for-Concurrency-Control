@@ -1,11 +1,10 @@
-
 def solveConflict(schedule):
     """
     Checks if the schedule is conflict serializable
     """
 
 # initialize set of transactions
-    transactions = set([op.operation_type for op in schedule])
+    transactions = set([op.id_transaction for op in schedule])
 
     # initialize precedence graph
     graph = {tx: set() for tx in transactions}
@@ -15,10 +14,10 @@ def solveConflict(schedule):
         for op2 in schedule[i+1:]:
             if op1.object != op2.object:
                 continue
-            if op1.operation_type == op2.operation_type:
+            if op1.id_transaction == op2.id_transaction:
                 continue
-            if op1.id_transaction == 'WRITE' or op2.id_transaction == 'WRITE':
-                graph[op1.operation_type].add(op2.operation_type)
+            if op1.operation_type == 'WRITE' or op2.operation_type == 'WRITE':
+                graph[op1.id_transaction].add(op2.id_transaction)
 
     def DFS(node_current, node_start, visited):
         """ Returns True whether there is a cycle starting and ending to node_start"""
@@ -33,21 +32,19 @@ def solveConflict(schedule):
         return False
 
     cycle_on_node = map(lambda n: DFS(n, n, set()), graph)
-    # if there is a cycle on any node is not c.s., hence return False
-    return not any(cycle_on_node)
 
-
-if __name__ == '__main__':
-    import sys
-    from utils import parse_schedule
-
-    # schedule_str = 'w3(A)w2(C)r1(A)w1(B)r1(C)r4(A)w4(D)'
-    # schedule_str = 'w1(x)r2(x)w1(z)r2(z)r3(x)r4(z)w4(z)w2(x)'
-    schedule_str = 'w1(x)r1(z)r2(z)w1(z)r3(x)r4(z)w4(z)w2(x)'
-    # schedule_str = 'r3(z)r1(z)w2(y)w4(x)w3(z)w3(y)r1(x)w2(x)'
-
-    schedule = parse_schedule(schedule_str)
-
-    res = solveConflict(schedule)
-
-    print('Is ser?', res)
+    precedence_graph = []
+    start = 0
+    num_operations = len(schedule)
+    while start < num_operations:
+        end = start + 1
+        while end < num_operations:
+            op1 = schedule[start]
+            op2 = schedule[end]
+            if op1 != op2 and (op2.operation_type == 'WRITE' or op1.operation_type == 'WRITE') and op1.id_transaction != op2.id_transaction and op1.object == op2.object:
+                # An edge exists between op1 and op2 if op1 is a write operation and op2 is a read operation on the same object
+                precedence_graph.append(
+                    [op1.id_transaction, op2.id_transaction])
+            end += 1
+        start += 1
+    return not any(cycle_on_node), precedence_graph
