@@ -16,7 +16,7 @@ def solveConflict(schedule):
                 continue
             if op1.id_transaction == op2.id_transaction:
                 continue
-            if op1.operation_type == 'WRITE' or op2.operation_type == 'WRITE':
+            if op1.action_type == 'WRITE' or op2.action_type == 'WRITE':
                 graph[op1.id_transaction].add(op2.id_transaction)
 
     def DFS(node_current, node_start, visited):
@@ -33,18 +33,4 @@ def solveConflict(schedule):
 
     cycle_on_node = map(lambda n: DFS(n, n, set()), graph)
 
-    precedence_graph = []
-    start = 0
-    num_operations = len(schedule)
-    while start < num_operations:
-        end = start + 1
-        while end < num_operations:
-            op1 = schedule[start]
-            op2 = schedule[end]
-            if op1 != op2 and (op2.operation_type == 'WRITE' or op1.operation_type == 'WRITE') and op1.id_transaction != op2.id_transaction and op1.object == op2.object:
-                # An edge exists between op1 and op2 if op1 is a write operation and op2 is a read operation on the same object
-                precedence_graph.append(
-                    [op1.id_transaction, op2.id_transaction])
-            end += 1
-        start += 1
-    return not any(cycle_on_node), precedence_graph
+    return not any(cycle_on_node)

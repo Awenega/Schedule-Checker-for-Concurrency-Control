@@ -1,10 +1,12 @@
 from flask import Flask, jsonify, request, render_template
 
 # Import functions from other files
-from check2PL import solve2PL
-from checkConflict import solveConflict
-from checkTimestamps import solveTimestamps
-from utils import parse_schedule
+from SolverForViewSerializability import SolveViewSerializability
+from SolverFor2PL import solve2PL
+from SolverForConflictSerializability import solveConflict
+from SolverForTimestamps import solveTimestamps
+from Scheduler import parse_schedule
+from ComputePG import ComputePrecedenceGraph
 
 app = Flask(__name__, template_folder='static/templates')
 
@@ -36,7 +38,8 @@ def solve():
         'precedence_graph': 'precedence_graph' in selected_possibilities,
         'conflict_serializability': 'conflict_serializability' in selected_possibilities,
         '2pl_protocol': '2pl_protocol' in selected_possibilities,
-        'timestamp': 'timestamp' in selected_possibilities
+        'timestamp': 'timestamp' in selected_possibilities,
+        'view_serializability': 'view_serializability' in selected_possibilities
     }
 
     # Initialize the response with the cached HTML page
@@ -60,21 +63,31 @@ def solve():
         return errors_in_schedule
 
     response = ''
-
+    precedence_graph = None
     # Format results for conflict serializability
     msg = '<h4>Schedule provided: </h4><br>'
     msg += '<b>S: </b>' + schedule
     response += '<br>' + msg + '<br>'
 
-    res_confl, precedence_graph = solveConflict(sched_parsed)
+    if wantSolve['view_serializability']:
+        # Format results for conflict serializability
+        res_view, res_equiv = SolveViewSerializability(sched_parsed)
+        msg = '<h4>View Serializability:</i></h4><br>'
+        msg += 'Is the schedule view serializable: <b>' + \
+            str(res_view) + '</b>'
+        if res_equiv != None:
+            msg += ', is view equivalent to this serial schedule: ' + res_equiv + '<br>'
+        response += '<br>' + msg + '<br>'
+
     if wantSolve['conflict_serializability']:
         # Format results for conflict serializability
+        res_confl = solveConflict(sched_parsed)
         msg = '<h4>Conflict serializability:</i></h4><br>'
         msg += 'Is the schedule conflict serializable: <b>' + \
             str(res_confl) + '</b>'
         response += '<br>' + msg + '<br>'
-    if not wantSolve['precedence_graph']:
-        precedence_graph = None
+    if wantSolve['precedence_graph']:
+        precedence_graph = ComputePrecedenceGraph(sched_parsed)
 
     if wantSolve['2pl_protocol']:
         res_2pl = solve2PL(sched_parsed, use_xl_only)

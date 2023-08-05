@@ -1,12 +1,12 @@
 
 from __future__ import print_function  # compatibility python2
-from operation import Operation
+from Actions import Action
 
 
 def parse_schedule(sched):
     """
     Parses the input schedule as a string.
-    Returns the list of 'Operation' objects
+    Returns the list of 'Action' objects
     """
     if sched == '':
         print('Using test schedule')
@@ -15,44 +15,44 @@ def parse_schedule(sched):
     schedule = []
 
     i = 0
-    last_ops = dict()  # save last operation for each transaction
+    last_ops = dict()  # save last Actions for each transaction
 
     try:
         while i < len(sched):
             t, tx, o = None, None, None
 
-            # get operation type 't'
+            # get Actions type 't'
             if sched[i] == 'r':
                 t = 'READ'
             elif sched[i] == 'w':
                 t = 'WRITE'
             else:
-                return _sched_malformed_err('operation types must be \'r\' or \'w\'')
+                return _sched_malformed_err('Actions types must be \'r\' or \'w\'')
             i += 1
 
-            # get operation transaction 'tx'
+            # get Actions transaction 'tx'
             tx_end = sched[i:].find('(')
             tx = sched[i:i+tx_end]
             if tx == '':
                 return _sched_malformed_err()
             i = i+tx_end+1
 
-            # get operation object 'o'
+            # get Actions object 'o'
             o_end = sched[i:].find(')')
             o = sched[i:i+o_end]
             if o == '':
                 return _sched_malformed_err()
             i = i+o_end+1
 
-            operation = Operation(t, tx, o)  # operation object
+            Actions = Action(t, tx, o)  # Actions object
 
-            # save operation as last for transaction tx
-            last_ops[tx] = operation
-            schedule.append(operation)  # append operation to schedule
+            # save Actions as last for transaction tx
+            last_ops[tx] = Actions
+            schedule.append(Actions)  # append Actions to schedule
 
         # Set final operations for each transaction
         for op in last_ops.values():
-            op.tx_continues = False
+            op.isLastAction = False
 
         return schedule
 
@@ -75,7 +75,7 @@ def format_schedule(sched):
     """
     s = ''
     for op in sched:
-        if op.operation_type != 'READ' and op.operation_type != 'WRITE':
+        if op.action_type != 'READ' and op.action_type != 'WRITE':
             s += '<b>'+str(op)+' </b>'
         else:
             s += str(op)+' '

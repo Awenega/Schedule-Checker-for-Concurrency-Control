@@ -1,6 +1,6 @@
 
 from collections import defaultdict
-from utils import parse_schedule, _sched_malformed_err
+from Scheduler import parse_schedule, _sched_malformed_err
 
 
 from os.path import isfile
@@ -35,14 +35,14 @@ def solveTimestamps(schedule):
     written_obj = defaultdict(set)
 
     # Set of waiting transactions
-    # if 'T' is a waiting transaction, then waiting_tx['T'] is the index of the operation of 'T' in the schedule where 'T' is blocked
+    # if 'T' is a waiting transaction, then waiting_tx['T'] is the index of the Actions of 'T' in the schedule where 'T' is blocked
     waiting_tx = dict()
 
     # final solution. Its entries are lists
     solution = list()
     solution_entry = list()
 
-    # - - - - utils - - -
+    # - - - - Scheduler - - -
 
     def commit(tx):
         """Performs the commit of transaction 'tx'
@@ -65,13 +65,13 @@ def solveTimestamps(schedule):
             set_timestamp_data(obj, CB, True)
 
     def execute(op):
-        """Execute operation op. Write in the solution its execution and,
+        """Execute Actions op. Write in the solution its execution and,
         whether it is the last, the commit of its transaction
         """
-        if op.operation_type == 'WRITE':
+        if op.action_type == 'WRITE':
             written_obj[op.id_transaction].add(op.object)
-        if not operation.tx_continues:
-            commit(operation.id_transaction)
+        if not Actions.isLastAction:
+            commit(Actions.id_transaction)
 
     def set_timestamp_data(obj, key, value):
         if key != CB and key != WTS and key != WTS_C and key != RTS:
@@ -88,7 +88,7 @@ def solveTimestamps(schedule):
     # sanity check on the timestamps
     try:
         err = None
-        all_timestamps = [TS(op.operation_type) for op in schedule]
+        all_timestamps = [TS(op.action_type) for op in schedule]
         negative_ts = filter(lambda x: x < 0, all_timestamps)
         if len(list(negative_ts)) > 0:
             err = _sched_malformed_err(
@@ -107,66 +107,66 @@ def solveTimestamps(schedule):
 
         debug('\nNEW STEP')
 
-        # Fetch new operation
+        # Fetch new Actions
 
-        # First try to fetch the next operation if a transaction has been unlocked
+        # First try to fetch the next Actions if a transaction has been unlocked
         locking_ops_index = sorted(waiting_tx.values())
         for i_lock in locking_ops_index:
             obj = schedule[i_lock].object
-            # if the commit bit of an object, waited by some transaction, becomes true then fetch the operation
+            # if the commit bit of an object, waited by some transaction, becomes true then fetch the Actions
             if timestamps_data[obj][CB] == True:
-                operation = schedule[i_lock]
-                waiting_tx.pop(operation.id_transaction)
+                Actions = schedule[i_lock]
+                waiting_tx.pop(Actions.id_transaction)
                 solution_entry.append(
-                    f'resume {str(operation.id_transaction)}')
+                    f'resume {str(Actions.id_transaction)}')
                 break
 
-        else:  # no waiting operation, go on with the schedule
+        else:  # no waiting Actions, go on with the schedule
             if i >= len(schedule):
-                # If here, there are no waiting operation and the schedule is empty, can return solution
+                # If here, there are no waiting Actions and the schedule is empty, can return solution
                 # return solution
                 return {'err': None, 'sol': format_solution(solution), 'waiting_tx': waiting_tx}
 
-            operation = schedule[i]
-            debug('Picked operation from schedule', operation)
-            # Check if transaction of the operation is in wait, if so skip it
-            tx = operation.id_transaction
+            Actions = schedule[i]
+            debug('Picked Actions from schedule', Actions)
+            # Check if transaction of the Actions is in wait, if so skip it
+            tx = Actions.id_transaction
             if tx in waiting_tx:
-                debug('Transaction is in waiting', operation)
+                debug('Transaction is in waiting', Actions)
                 i += 1
                 continue
 
-        # Now we have fetched the next operation, execute it
-        debug('executing operation', operation)
+        # Now we have fetched the next Actions, execute it
+        debug('executing Actions', Actions)
 
         # New entry that will be populated and pushed into the solution
-        solution_entry.append(str(operation))
+        solution_entry.append(str(Actions))
 
-        transaction = operation.id_transaction
-        obj = operation.object
+        transaction = Actions.id_transaction
+        obj = Actions.object
         ts_obj = timestamps_data[obj]
 
-        if operation.id_transaction == 'READ':
+        if Actions.id_transaction == 'READ':
             if TS(transaction) >= ts_obj[WTS]:
                 if ts_obj[CB] or TS(transaction) == ts_obj[WTS]:
                     set_timestamp_data(obj, RTS, max(
                         TS(transaction), ts_obj[RTS]))
-                    execute(operation)
+                    execute(Actions)
                 else:
-                    debug('put operation in wait', operation)
+                    debug('put Actions in wait', Actions)
                     waiting_tx[transaction] = i
                     solution_entry.append('Wait')
             else:
                 rollback(transaction)
 
-        elif operation.id_transaction == 'WRITE':
+        elif Actions.id_transaction == 'WRITE':
             if TS(transaction) >= ts_obj[RTS] and TS(transaction) >= ts_obj[WTS]:
                 if ts_obj[CB]:
                     set_timestamp_data(obj, WTS, TS(transaction))
                     set_timestamp_data(obj, CB, False)
-                    execute(operation)
+                    execute(Actions)
                 else:
-                    debug('put operation in wait', operation)
+                    debug('put Actions in wait', Actions)
                     waiting_tx[transaction] = i
                     solution_entry.append('Wait')
             else:
@@ -174,14 +174,14 @@ def solveTimestamps(schedule):
                     if ts_obj[CB]:
                         solution_entry.append('Ignored (Thomas rule)')
                     else:
-                        debug('put operation in wait', operation)
+                        debug('put Actions in wait', Actions)
                         waiting_tx[transaction] = i
                         solution_entry.append('Wait')
                 else:
                     rollback(transaction)
 
         else:
-            raise ValueError('Bad operation type')
+            raise ValueError('Bad Actions type')
 
         i += 1  # update schedule index
         # append data to solution
@@ -190,10 +190,10 @@ def solveTimestamps(schedule):
 
 
 def format_solution(sol):
-    # s = '<table><tr><th><b>Operation</b></th><th><b>Action</b></th></tr>'
+    # s = '<table><tr><th><b>Action</b></th><th><b>Action</b></th></tr>'
     s = '<table>'
     for action in sol:
-        s += f'<tr><td>{action[0]}</td><td>'  # action[0] is the operation
+        s += f'<tr><td>{action[0]}</td><td>'  # action[0] is the Actions
         for op in action[1:]:
             s += op + ' '
         s += '</td></tr>'
