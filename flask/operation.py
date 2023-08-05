@@ -25,9 +25,9 @@ class Operation:
             s = 'w'
         elif self.operation_type == 'UNLOCKED':
             s = 'u'
-        elif self.operation_type == 'SHARED_L':
+        elif self.operation_type == 'SHARED_LOCK':
             s = 'sl'
-        elif self.operation_type == 'XCLUSIVE_L':
+        elif self.operation_type == 'EXCLUSIVE_LOCK':
             s = 'xl'
         else:
             print('WARNING: op operation_type not recognized')

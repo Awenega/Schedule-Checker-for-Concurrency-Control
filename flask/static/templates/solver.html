@@ -43,7 +43,7 @@
         <h2 class="text-center pb-4">Transaction Checker</h2>
         <form id="form_with_schedule" onsubmit="submitForm(event)">
           <div class="form-group pb-4">
-            <label for="input_with_schedule">Schedule:</label>
+            <label for="input_with_schedule"><b>Schedule:</b></label>
             <input
               type="text"
               name="schedule"
@@ -52,6 +52,28 @@
               placeholder="Enter a schedule..."
             />
           </div>
+          <!-- Add checkboxes for each possibility -->
+          <div class="form-group pb-4">
+            <label><b>Choose Possibilities:</b></label
+            ><br />
+            <input
+              type="checkbox"
+              name="possibility"
+              value="precedence_graph"
+            />
+            Precedence Graph<br />
+            <input
+              type="checkbox"
+              name="possibility"
+              value="conflict_serializability"
+            />
+            Conflict Serializability<br />
+            <input type="checkbox" name="possibility" value="2pl_protocol" />
+            2PL Compliance <br />
+            <input type="checkbox" name="possibility" value="timestamp" />
+            Timestamp<br />
+          </div>
+
           <div class="form-group pb-4">
             <input type="checkbox" name="use_xl_only" id="input_checkbox" />
             <label for="input_checkbox"
@@ -59,7 +81,11 @@
             >
           </div>
           <div class="form-group pb-4">
-            <button type="submit" class="btn btn-default px-3 sapienza-button">
+            <button
+              type="submit"
+              id="solve_button"
+              class="btn btn-default px-3 sapienza-button"
+            >
               <i class="fa-solid fa-paper-plane icon-of-page"></i> Solve
             </button>
             <button
@@ -71,9 +97,10 @@
             </button>
           </div>
         </form>
-        <div id="response-container"></div>
         <div id="precedence-graph-container"></div>
+        <div id="response-container"></div>
       </div>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
   </body>
 </html>

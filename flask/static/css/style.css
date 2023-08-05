@@ -64,8 +64,9 @@ body {
     color: white;
   }
 
-  #response-container {
+  #precedence-graph-container {
     border-top: solid 2px #883844;
+    padding-top: 10px ;
   }
 
   .author-section {
@@ -81,6 +82,7 @@ body {
     padding-bottom: 1rem;
   }
 
-  @media (ma) {
-    
+  .btn[disabled]:hover .tooltip {
+    opacity: 1;
+    visibility: visible;
   }

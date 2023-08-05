@@ -6,7 +6,6 @@ function submitForm(event) {
     $("#precedence-graph-container").empty();
     var formData = $("#form_with_schedule").serialize();
     $.post("/solve", formData, function (data) {
-
         if (data.precedence_graph === undefined) {
             // Precedence graph not available in the JSON data
             // Append the response data to the response container
@@ -22,29 +21,81 @@ function submitForm(event) {
             updateButtonStates();
             return;
         }
-        // Extract the response data and precedence graph from the JSON data
-        var responseData = data.data;
-        var precedenceGraph = data.precedence_graph;
+        else if (data.precedence_graph == null) {
+            var responseData = data.data;
+            // Precedence graph not available in the JSON data
+            // Append the response data to the response container
+            $("#response-container").append("<div class='response'>" + responseData + "</div>");
 
-        // Append the response data to the response container
-        $("#response-container").append("<div class='response'>" + responseData + "</div>");
+            // Clear the input field after form submission
+            $("#input_with_schedule").val("");
 
-        // Clear the input field after form submission
-        $("#input_with_schedule").val("");
+            // Scroll to the bottom to show the latest response
+            $("#response-container").scrollTop($("#response-container")[0].scrollHeight);
 
-        // Scroll to the bottom to show the latest response
-        $("#response-container").scrollTop($("#response-container")[0].scrollHeight);
+            // Update button states after receiving the response
+            updateButtonStates();
+            return;
+        } else {
+            // Extract the response data and precedence graph from the JSON data
+            var responseData = data.data;
+            var precedenceGraph = data.precedence_graph;
 
-        // Update button states after receiving the response
-        updateButtonStates();
-        // Display the precedence graph using d3.js
-        drawPrecedenceGraph(precedenceGraph);
+            // Append the response data to the response container
+            $("#response-container").append("<div class='response'>" + responseData + "</div>");
+
+            // Clear the input field after form submission
+            $("#input_with_schedule").val("");
+
+            // Scroll to the bottom to show the latest response
+            $("#response-container").scrollTop($("#response-container")[0].scrollHeight);
+
+            // Update button states after receiving the response
+            updateButtonStates();
+
+            // Display the precedence graph using d3.js
+            drawPrecedenceGraph(precedenceGraph);
+        }
     });
 }
 
 $(document).ready(function () {
     // Initialize button states on page load
     updateButtonStates();
+
+    $("#solve_button").prop("disabled", true);
+
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
+
+    // Show tooltip on hover when the button is disabled
+    $("#solve_button").hover(
+        function () {
+            if ($(this).prop("disabled")) {
+                $(this).tooltip("show");
+            }
+        },
+        function () {
+            if ($(this).prop("disabled")) {
+                $(this).tooltip("hide");
+            }
+        }
+    );
+
+    // Add event listener to checkboxes
+    $("input[name='possibility']").on("change", function () {
+        // Check if any checkbox is checked
+        if ($("input[name='possibility']:checked").length > 0) {
+            // Enable the Solve button
+            $("#solve_button").prop("disabled", false);
+        } else {
+            // Disable the Solve button
+            $("#solve_button").prop("disabled", true);
+        }
+    });
 
     // Handle Clear button click
     $("#clear_button").click(function () {
@@ -78,7 +129,7 @@ function updateButtonStates() {
 function drawPrecedenceGraph(precedenceGraph) {
 
     // Update the title with the specified text
-    $("#precedence-graph-container").html("<b>Precedence Graph</b>");
+    $("#precedence-graph-container").html("<h4>Precedence Graph:</h4>");
     // Extract unique IDs from the precedenceGraph
     const uniqueIds = [...new Set(precedenceGraph.flat())];
 

@@ -29,6 +29,15 @@ def solve():
     # Get and check arguments from the request
     schedule = request.form.get('schedule')
     use_xl_only = request.form.get('use_xl_only')
+    selected_possibilities = request.form.getlist('possibility')
+
+    # Convert selected_possibilities to boolean values
+    wantSolve = {
+        'precedence_graph': 'precedence_graph' in selected_possibilities,
+        'conflict_serializability': 'conflict_serializability' in selected_possibilities,
+        '2pl_protocol': '2pl_protocol' in selected_possibilities,
+        'timestamp': 'timestamp' in selected_possibilities
+    }
 
     # Initialize the response with the cached HTML page
     response = "Must provide a schedule!"
@@ -53,45 +62,49 @@ def solve():
     response = ''
 
     # Format results for conflict serializability
-    msg = '<b><i>Schedule provided: </i></b><br>'
-    msg += schedule
+    msg = '<h4>Schedule provided: </h4><br>'
+    msg += '<b>S: </b>' + schedule
     response += '<br>' + msg + '<br>'
 
-    # Solve for conflict serializability, 2PL, and timestamps
     res_confl, precedence_graph = solveConflict(sched_parsed)
-
-    res_2pl = solve2PL(sched_parsed, use_xl_only)
-    res_ts = solveTimestamps(sched_parsed)
-
-    # Format results for conflict serializability
-    msg = '<b><i>Conflict serializability</i></b><br>'
-    msg += 'Is the schedule conflict serializable: <i>' + \
-        str(res_confl) + '</i>'
-    response += '<br>' + msg + '<br>'
-
-    # Format results for 2PL
-    msg = '<b><i>Two phase lock protocol</i></b><br>'
-    if res_2pl['sol'] is None:
-        msg += res_2pl['err']
+    if wantSolve['conflict_serializability']:
+        # Format results for conflict serializability
+        msg = '<h4>Conflict serializability:</i></h4><br>'
+        msg += 'Is the schedule conflict serializable: <b>' + \
+            str(res_confl) + '</b>'
         response += '<br>' + msg + '<br>'
-    else:
-        msg += """
-        Solution: {} <br>
-        Is the schedule strict-2PL: <i>{}</i> <br>
-        Is the schedule strong strict-2PL: <i>{}</i>
-        """.format(res_2pl['sol'], res_2pl['strict'], res_2pl['strong'])
-        response += '<br>' + msg + '<br>'
+    if not wantSolve['precedence_graph']:
+        precedence_graph = None
 
-    # Format results for timestamps
-    msg = '<b><i>Timestamps (DRAFT)</i></b><br>'
-    if res_ts['err'] is None:
-        msg += 'List of executed operations: ' + str(res_ts['sol']) + '<br>'
-        msg += 'List of waiting transactions at the end of schedule: ' + \
-            str(res_ts['waiting_tx']) + '<br>'
-        response += '<br>' + msg + '<br>'
-    else:
-        msg += res_ts['err'] + '<br>'
-        response += '<br>' + msg + '<br>'
+    if wantSolve['2pl_protocol']:
+        res_2pl = solve2PL(sched_parsed, use_xl_only)
+
+        # Format results for 2PL
+        msg = '<h4>Two phase lock protocol:</h4><br>'
+        if res_2pl['sol'] is None:
+            msg += res_2pl['err']
+            response += '<br>' + msg + '<br>'
+        else:
+            msg += """
+            Solution: {} <br>
+            Is the schedule strict-2PL: <i>{}</i> <br>
+            Is the schedule strong strict-2PL: <i>{}</i>
+            """.format(res_2pl['sol'], res_2pl['strict'], res_2pl['strong'])
+            response += '<br>' + msg + '<br>'
+
+    if wantSolve['timestamp']:
+        res_ts = solveTimestamps(sched_parsed)
+        # Format results for timestamps
+        msg = '<h4>Timestamps (DRAFT):</h4><br>'
+        if res_ts['err'] is None:
+            msg += 'List of executed operations: ' + \
+                str(res_ts['sol']) + '<br>'
+            msg += 'List of waiting transactions at the end of schedule: ' + \
+                str(res_ts['waiting_tx']) + '<br>'
+            response += '<br>' + msg + '<br>'
+        else:
+            msg += res_ts['err'] + '<br>'
+            response += '<br>' + msg + '<br>'
 
     response_solve = {
         'data': response,
@@ -99,19 +112,6 @@ def solve():
     }
 
     return jsonify(response_solve)
-
-
-@app.route('/get_precedence_graph', methods=['POST'])
-def get_precedence_graph():
-    # ... your existing code ...
-
-    # Solve for conflict serializability and get the precedence graph
-    res_confl, precedence_graph = solveConflict(sched_parsed)
-
-    # ... your existing code ...
-
-    # Return the precedence graph data as JSON
-    return jsonify(precedence_graph=precedence_graph)
 
 
 if __name__ == "__main__":
