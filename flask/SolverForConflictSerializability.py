@@ -1,16 +1,11 @@
-def solveConflict(schedule):
-    """
-    Checks if the schedule is conflict serializable
-    """
-
-# initialize set of transactions
+def SolveConflictSerializability(schedule):
     transactions = set([op.id_transaction for op in schedule])
 
-    # initialize precedence graph
     graph = {tx: set() for tx in transactions}
 
-    # populate precedence graph
     for op1, i in zip(schedule, range(len(schedule))):
+        if op1.action_type == 'COMMIT':
+            continue
         for op2 in schedule[i+1:]:
             if op1.object != op2.object:
                 continue
@@ -20,7 +15,6 @@ def solveConflict(schedule):
                 graph[op1.id_transaction].add(op2.id_transaction)
 
     def DFS(node_current, node_start, visited):
-        """ Returns True whether there is a cycle starting and ending to node_start"""
         for children in graph[node_current]:
             if children == node_start:
                 return True

@@ -28,7 +28,7 @@ def SolveViewSerializability(schedule):
 def last_write(schedule):
     last_write = {}
     for action in schedule:
-        if action.action_type == 'READ':
+        if action.action_type == 'READ' or action.action_type == 'COMMIT':
             continue
         else:
             last_write[action.object] = action.id_transaction
@@ -40,7 +40,7 @@ def read_from(schedule):
     read_from = []
     for first in range(len(schedule)):
         firstAction = schedule[first]
-        if firstAction.action_type == 'READ':
+        if firstAction.action_type == 'READ' or firstAction.action_type == 'COMMIT':
             continue
 
         for second in range(first + 1, len(schedule)):

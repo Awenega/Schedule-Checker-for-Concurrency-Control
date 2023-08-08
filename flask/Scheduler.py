@@ -1,99 +1,87 @@
-
-from __future__ import print_function  # compatibility python2
 from Actions import Action
 
 
-def parse_schedule(sched):
-    """
-    Parses the input schedule as a string.
-    Returns the list of 'Action' objects
-    """
-    if sched == '':
-        print('Using test schedule')
-        return parse_schedule(TEST_SCHEDULES[-1])
+def parseTheSchedule(schedule):
 
-    schedule = []
-
-    i = 0
-    last_ops = dict()  # save last Actions for each transaction
+    scheduleFormatted = []
+    currentId = 0
+    lastAction = dict()
+    number_of_actions = len(schedule)
+    isTerminated = dict()
+    transaction_ids = dict()
 
     try:
-        while i < len(sched):
-            t, tx, o = None, None, None
+        while currentId < number_of_actions:
+            action = None
+            id_transaction = None
+            object = None
 
-            # get Actions type 't'
-            if sched[i] == 'r':
-                t = 'READ'
-            elif sched[i] == 'w':
-                t = 'WRITE'
+            if schedule[currentId] == 'r':
+                action = 'READ'
+            elif schedule[currentId] == 'w':
+                action = 'WRITE'
+            elif schedule[currentId] == 'c':
+                action = 'COMMIT'
+
+                currentId += 1
+                if currentId == number_of_actions:
+                    return scheduleMalformed('Missing transaction ID after COMMIT')
+
+                id_transactionCommited = schedule[currentId]
+
+                if not (id_transactionCommited in transaction_ids):
+                    return scheduleMalformed('Must COMMIT an existing transaction')
+
+                isTerminated[id_transactionCommited] = True
+                ActionCurrent = Action(action, id_transactionCommited, None)
+
+                scheduleFormatted.append(ActionCurrent)
+                currentId += 1
+                continue
             else:
-                return _sched_malformed_err('Actions types must be \'r\' or \'w\'')
-            i += 1
+                return scheduleMalformed('Current action types must be \'<b>r</b>\' (READ), \'<b>w</b>\' (WRITE) or \'<b>c</b>\' (COMMIT)')
+            currentId += 1
 
-            # get Actions transaction 'tx'
-            tx_end = sched[i:].find('(')
-            tx = sched[i:i+tx_end]
-            if tx == '':
-                return _sched_malformed_err()
-            i = i+tx_end+1
+            id_transactionEnd = schedule[currentId:].find('(')
+            id_transaction = schedule[currentId:currentId+id_transactionEnd]
+            if id_transaction == '':
+                return scheduleMalformed()
+            elif id_transaction in isTerminated:
+                return scheduleMalformed("Can not add actions after COMMIT")
+            transaction_ids[id_transaction] = True
+            currentId = currentId+id_transactionEnd+1
 
-            # get Actions object 'o'
-            o_end = sched[i:].find(')')
-            o = sched[i:i+o_end]
-            if o == '':
-                return _sched_malformed_err()
-            i = i+o_end+1
+            objectEnd = schedule[currentId:].find(')')
+            object = schedule[currentId:currentId+objectEnd]
+            if object == '':
+                return scheduleMalformed()
+            currentId = currentId+objectEnd+1
 
-            Actions = Action(t, tx, o)  # Actions object
+            ActionCurrent = Action(action, id_transaction, object)
 
-            # save Actions as last for transaction tx
-            last_ops[tx] = Actions
-            schedule.append(Actions)  # append Actions to schedule
+            lastAction[id_transaction] = ActionCurrent
+            scheduleFormatted.append(ActionCurrent)
 
-        # Set final operations for each transaction
-        for op in last_ops.values():
-            op.isLastAction = False
+        for action in lastAction.values():
+            action.isLastAction = True
 
-        return schedule
+        return scheduleFormatted
 
     except ValueError:
-        return _sched_malformed_err()
+        return scheduleMalformed()
 
 
-def _sched_malformed_err(msg=None):
-    """
-    Returns an error message if the schedule is malformed
-    """
-    msg = msg if msg else 'schedule malformed'
-    help_msg = "<br><br>Enter a schedule like <i>r1(x)w1(y)r2(y)r1(z)</i>"
-    return msg+help_msg
-
-
-def format_schedule(sched):
-    """
-    Formats a sch edule (as list of Operations) for printing in HTML
-    """
-    s = ''
-    for op in sched:
-        if op.action_type != 'READ' and op.action_type != 'WRITE':
-            s += '<b>'+str(op)+' </b>'
+def formatSchedule(schedule):
+    scheduleFormatted = ''
+    for action in schedule:
+        if action.action_type != 'READ' and action.action_type != 'WRITE' and action.action_type != 'COMMIT':
+            scheduleFormatted += '<b>' + str(action) + ' </b>'
         else:
-            s += str(op)+' '
-    return s+'\n'
+            scheduleFormatted += str(action)+' '
+    return scheduleFormatted+'\n'
 
 
-# test schedules
-TEST_SCHEDULES = [
-    'r1(x)r2(z)r1(z)r3(x)r3(y)w1(x)w3(y)r2(y)w4(z)w2(y)',
-    'r1(A)r2(A)r2(B)w1(A)w2(D)r3(C)r1(C)w3(B)r4(A)',
-    'r1(A)r2(A)r3(B)w1(A)r2(C)r2(B)w2(B)w1(C)',
-    'r1(A)r2(B)r3(B)w1(A)r4(A)r2(C)r2(B)w2(B)w1(C)',
-    'w1(x)r2(x)w1(y)',
-    'r1(A)r2(A)r3(B)w1(A)r3(A)r2(C)r2(B)w2(B)w1(C)',
-    'r1(x)w2(x)r3(x)r1(y)r4(z)w2(y)r1(v)w3(v)r4(v)w4(y)w5(y)w5(z)',
-    'r1(A)r2(B)r3(C)r1(B)r2(C)r3(D)w1(C)w2(D)w3(E)',
-    'r1(A)r2(B)r3(C)r1(B)r2(C)r3(D)w1(A)w2(B)w3(C)',
-    'r1(A)r2(B)r3(C)r1(B)r2(C)r3(A)w1(A)w2(B)w3(C)',
-    'r1(A)r2(B)r3(C)w1(B)w2(C)w3(A)',
-    'r6(A)r8(A)r9(A)w8(A)w11(A)r10(A)'
-]
+def scheduleMalformed(message=None):
+    message = message if message else 'The given schedule is malformed!'
+    hintMessage = "<br><br>Enter a schedule that is formatted like <b>w1(A)r1(B)r3(C)c3r1(A)c1</b>"
+    return message + hintMessage

@@ -2,26 +2,11 @@
 import itertools
 import sys
 
-from Scheduler import format_schedule
+from Scheduler import formatSchedule
 from Actions import Action
 
 
 def solve2PL(schedule, use_xl_only):
-    """
-    Checks if a schedule respects the plain 2PL protocol, strong and strict.
-
-    Args:
-            schedule: list of Action objects representing the schedule
-            use_xl_only: boolean, if True use only exclusive locks, not shared locks
-
-    Returns:
-            (dict) {
-                    'sol': solution schedule with the locks inserted. If the schedule does not 
-                                            respects 2PL it is an error message,
-                    'strict': boolean, true if respects strict 2PL,
-                    'strong': boolean, true if respects strong 2PL,
-            }	
-    """
 
     print(schedule, use_xl_only, file=sys.stderr)
 
@@ -39,26 +24,26 @@ def solve2PL(schedule, use_xl_only):
     # flags that check if the schedule is 2PL-strict
     # set to true when the transaction unlocks the first exclusive lock
     has_x_unlocked = {tx: False for tx in transactions}
-    # set to false if any transaction has xunlocked but after performs another Actions
+    # set to false if any transaction has xunlocked but after performs another action
     is_strict = True
 
     # flags that check if the schedule is strong 2PL-strict
     # set to true when the transaction unlocks the first lock, shared or excl.
     has_unlocked = {tx: False for tx in transactions}
-    # set to false if any transaction unlocks any lock but after performs another Actions
+    # set to false if any transaction unlocks any lock but after performs another action
     is_strong_strict = True
 
-    # output list storing lock/unlock operations.
+    # output list storing lock/unlock actions.
     # for every transaction i in the schedule, execute locks[i] before schedule[i]
-    # +1 to add unlocks operations at the end
+    # +1 to add unlocks actions at the end
     locks = [[] for i in range(len(schedule)+1)]
 
     def lock(target, trans, obj):
         """
-        Returns an Action object representing the lock Actions 'target' on 'obj' by 'trans'
+        Returns an action object representing the lock action 'target' on 'obj' by 'trans'
         """
         if target != 'SHARED_LOCK' and target != 'XCLUSIVE_L' and target != 'UNLOCKED':
-            raise ValueError('Invalid lock/unlock Actions')
+            raise ValueError('Invalid lock/unlock action')
         return Action(target, trans, obj)
 
     def merge_locks(locks, schedule):
@@ -76,7 +61,7 @@ def solve2PL(schedule, use_xl_only):
     def toState(target, trans, obj, i):
         """
         Takes care of transitioning 'obj' of 'trans' to state 'target', adding the corresponding
-        lock or unlock Actions to the solution list and checking whether the change of state is legal and feasible
+        lock or unlock action to the solution list and checking whether the change of state is legal and feasible
         """
         if target != 'START' and target != 'SHARED_LOCK' and target != 'XCLUSIVE_L' and target != 'UNLOCKED':
             raise ValueError('Bad target state')
@@ -116,7 +101,7 @@ def solve2PL(schedule, use_xl_only):
 
         if transaction_state[trans] == 'SHRINKING' and target != 'UNLOCKED':
             return unfeasible('while processing '+str(schedule[i])+', tansaction '+trans+' has to acquire a lock, ' +
-                              'but it has already performed an unlock Actions.', i)
+                              'but it has already performed an unlock action.', i)
 
         if target == 'UNLOCKED':
             transaction_state[trans] = 'SHRINKING'
@@ -130,16 +115,16 @@ def solve2PL(schedule, use_xl_only):
             has_unlocked[trans] = True
 
         states[trans][obj] = target  # set target state
-        # add the (un)lock Actions to the solution
+        # add the (un)lock action to the solution
         locks[i].append(lock(target, trans, obj))
 
     def unlock(trans, obj, i):
         """ Unlock 'obj' for transaction 'trans'.
         Before unlocking it, it must acquire ALL future locks that it
         will need in the future, because once something gets unlocked, 'trans' can no longer acquire
-        locks. So it will look in the future operations of 'trans', searching for read
+        locks. So it will look in the future actions of 'trans', searching for read
         and write actions on any object: on the matching objects, it will acquire an 
-        exclusive lock if 'trans' performs at least one write Actions, or, if there are only
+        exclusive lock if 'trans' performs at least one write action, or, if there are only
         reads, a shared lock. After acquiring those locks finally the lock on 'obj' is released.
         """
         if states[trans][obj] == 'UNLOCKED' or states[trans][obj] == 'START':
@@ -150,14 +135,14 @@ def solve2PL(schedule, use_xl_only):
 
         # look in the future transactions of 'trans', starting from transaction at 'i'+1
         # for j in range(i+1, len(schedule)):
-        # Actions = schedule[j]
-        for Actions in schedule[i+1:]:
-            if Actions.id_transaction != trans:  # we only need transactions of 'trans'
+        # action = schedule[j]
+        for action in schedule[i+1:]:
+            if action.id_transaction != trans:  # we only need transactions of 'trans'
                 continue
-            if Actions.action_type == 'READ':
-                will_be_read.add(Actions.object)
-            elif Actions.action_type == 'WRITE':
-                will_be_written.add(Actions.object)
+            if action.action_type == 'READ':
+                will_be_read.add(action.object)
+            elif action.action_type == 'WRITE':
+                will_be_written.add(action.object)
             else:
                 raise ValueError
 
@@ -205,30 +190,30 @@ def solve2PL(schedule, use_xl_only):
         if not i is None:
             sol = merge_locks(locks, schedule)
             offset = i + sum(map(lambda x: len(x), locks))
-            s1 += format_schedule(sol[:offset])
+            s1 += formatSchedule(sol[:offset])
 
         return {'sol': None, 'partial_locks': s1, 'err': s}
 
     # - - - -  main  - - - -
 
     for i in range(len(schedule)):
-        Actions = schedule[i]
+        action = schedule[i]
 
-        obj_state = states[Actions.id_transaction][Actions.object]
+        obj_state = states[action.id_transaction][action.object]
 
-        # If a tx has unlocked an exclusive lock and executes another Actions, then the whole schedule is not strict
-        if has_x_unlocked[Actions.id_transaction]:
+        # If a tx has unlocked an exclusive lock and executes another action, then the whole schedule is not strict
+        if has_x_unlocked[action.id_transaction]:
             is_strict = False
 
-        # If a tx has unlocked any lock and executes another Actions, then the whole schedule is not strong strict
-        if has_unlocked[Actions.id_transaction]:
+        # If a tx has unlocked any lock and executes another action, then the whole schedule is not strong strict
+        if has_unlocked[action.id_transaction]:
             is_strong_strict = False
 
-        if Actions.action_type == 'READ':
+        if action.action_type == 'READ':
 
             if obj_state == 'START':
                 err = toState(
-                    'SHARED_LOCK', Actions.id_transaction, Actions.object, i)
+                    'SHARED_LOCK', action.id_transaction, action.object, i)
                 if err:
                     return err
 
@@ -239,16 +224,16 @@ def solve2PL(schedule, use_xl_only):
                 pass
 
             elif obj_state == 'UNLOCKED':
-                return unfeasible('Actions '+str(Actions)+' needs to lock an unlocked object', i)
+                return unfeasible('action '+str(action)+' needs to lock an unlocked object', i)
 
             else:
                 raise ValueError('Bad state')
 
-        elif Actions.action_type == 'WRITE':
+        elif action.action_type == 'WRITE':
 
             if obj_state == 'START' or obj_state == 'SHARED_LOCK':
-                err = toState('XCLUSIVE_L', Actions.id_transaction,
-                              Actions.object, i)
+                err = toState('XCLUSIVE_L', action.id_transaction,
+                              action.object, i)
                 if err:
                     return err
 
@@ -256,19 +241,19 @@ def solve2PL(schedule, use_xl_only):
                 pass
 
             elif obj_state == 'UNLOCKED':
-                return unfeasible('Actions '+str(Actions)+' needs to lock an unlocked object', i)
+                return unfeasible('action '+str(action)+' needs to lock an unlocked object', i)
 
             else:
                 raise ValueError('Bad state')
 
         else:
-            raise ValueError('Bad Actions type')
+            raise ValueError('Bad action type')
 
     put_final_unlocks()  # unlock active locks
     # merge locks and the schedule
     solved_schedule = merge_locks(locks, schedule)
 
-    solved_schedule_str = format_schedule(solved_schedule)
+    solved_schedule_str = formatSchedule(solved_schedule)
 
     return {
         'sol': solved_schedule_str,

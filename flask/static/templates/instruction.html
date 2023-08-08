@@ -48,14 +48,16 @@
           <li>
             To use the scheduler, enter your schedule in the following format:
             <br />
-            <strong>r</strong
-            >1(<em>x</em>)<strong>w</strong>2(<em>y</em>)<strong>r</strong>3(<em>z</em>)...
+            <strong>w</strong
+            >1(<em>A</em>)<strong>r</strong>1(<em>B</em>)<strong>r</strong>3(<em>C</em>)<strong>c</strong>3<strong>r</strong>1(<em>A</em>)<strong>c</strong>1
             <br />
           </li>
           <li>
             <strong> r</strong> stands for READ, <strong>w</strong> stands for
-            WRITE, and the numbers represent the transaction IDs. The letters in
-            parentheses represent the objects being read or written.
+            WRITE, <strong> c</strong> stands for COMMIT and the numbers
+            represent the transaction IDs. The letters in parentheses represent
+            the objects being read or written. (COMMIT can be omitted, and
+            transaction is consider comitted after his last action)
           </li>
           <li>
             <i class="fa-solid fa-paper-plane icon-of-page"></i> Click on the
@@ -64,6 +66,10 @@
           <li>
             <i class="fa-solid fa-broom icon-of-page"></i> Click on the "Clear"
             button to clear the previous response.
+          </li>
+          <li>
+            <i class="fa-solid fa-check icon-of-page"></i> Click on the
+            "Checkbox" to solve that problem.
           </li>
         </ul>
 

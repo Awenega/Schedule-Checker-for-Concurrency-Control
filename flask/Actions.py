@@ -1,13 +1,13 @@
 class Action:
     def __init__(self, action_type, id_transaction, object):
-        if action_type is None or id_transaction is None or object is None:
+        if action_type is None or id_transaction is None or (action_type != "COMMIT" and object is None):
             raise ValueError(
                 'Must exist an operation type, id transaction and an object')
 
         self.action_type = str(action_type)
         self.id_transaction = str(id_transaction)
         self.object = str(object)
-        self.isLastAction = True
+        self.isLastAction = False
 
     def __str__(self):
         if self.action_type == 'READ':
@@ -20,8 +20,10 @@ class Action:
             operationType = 'sl'
         elif self.action_type == 'EXCLUSIVE_LOCK':
             operationType = 'xl'
+        elif self.action_type == 'COMMIT':
+            operationType = 'c'
         else:
-            print('WARNING: action_type not recognized for this Action')
+            print('WARNING: action type not recognized for this Action')
             operationType = self.action_type
         return operationType + self.id_transaction + '(' + self.object + ')'
 

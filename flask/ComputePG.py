@@ -3,6 +3,8 @@ def ComputePrecedenceGraph(schedule):
 
     for first in range(len(schedule)):
         firstAction = schedule[first]
+        if firstAction.action_type == 'COMMIT':
+            continue
 
         for second in range(first + 1, len(schedule)):
             secondAction = schedule[second]

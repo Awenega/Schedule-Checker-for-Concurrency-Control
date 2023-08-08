@@ -3,9 +3,10 @@ from flask import Flask, jsonify, request, render_template
 # Import functions from other files
 from SolverForViewSerializability import SolveViewSerializability
 from SolverFor2PL import solve2PL
-from SolverForConflictSerializability import solveConflict
+from SolverForConflictSerializability import SolveConflictSerializability
 from SolverForTimestamps import solveTimestamps
-from Scheduler import parse_schedule
+from SolverForRecoverable import SolveRecoverability
+from Scheduler import parseTheSchedule
 from ComputePG import ComputePrecedenceGraph
 
 app = Flask(__name__, template_folder='static/templates')
@@ -39,7 +40,8 @@ def solve():
         'conflict_serializability': 'conflict_serializability' in selected_possibilities,
         '2pl_protocol': '2pl_protocol' in selected_possibilities,
         'timestamp': 'timestamp' in selected_possibilities,
-        'view_serializability': 'view_serializability' in selected_possibilities
+        'view_serializability': 'view_serializability' in selected_possibilities,
+        'recoverability': 'recoverability' in selected_possibilities
     }
 
     # Initialize the response with the cached HTML page
@@ -56,7 +58,8 @@ def solve():
         return empty_schedule
 
     # Parse the input schedule to extract transactions and operations
-    sched_parsed = parse_schedule(schedule)
+    sched_parsed = parseTheSchedule(schedule)
+    print(sched_parsed)
 
     if type(sched_parsed) == str:  # Parsing error message
         errors_in_schedule = '<br>' + 'Parsing error: ' + sched_parsed + '<br>'
@@ -70,7 +73,6 @@ def solve():
     response += '<br>' + msg + '<br>'
 
     if wantSolve['view_serializability']:
-        # Format results for conflict serializability
         res_view, res_equiv = SolveViewSerializability(sched_parsed)
         msg = '<h4>View Serializability:</i></h4><br>'
         msg += 'Is the schedule view serializable: <b>' + \
@@ -80,14 +82,24 @@ def solve():
         response += '<br>' + msg + '<br>'
 
     if wantSolve['conflict_serializability']:
-        # Format results for conflict serializability
-        res_confl = solveConflict(sched_parsed)
+        res_confl = SolveConflictSerializability(sched_parsed)
         msg = '<h4>Conflict serializability:</i></h4><br>'
         msg += 'Is the schedule conflict serializable: <b>' + \
             str(res_confl) + '</b>'
         response += '<br>' + msg + '<br>'
     if wantSolve['precedence_graph']:
         precedence_graph = ComputePrecedenceGraph(sched_parsed)
+
+    if wantSolve['recoverability']:
+        res_rec, conflict_pair = SolveRecoverability(sched_parsed)
+        msg = '<h4>Recoverability:</i></h4><br>'
+        msg += 'Is the schedule recoverable: <b>' + \
+            str(res_rec) + '</b>'
+        if conflict_pair != None:
+            msg += ', because transaction T' + \
+                conflict_pair[0] + ' commit before transaction T' + \
+                conflict_pair[1] + '.<br>'
+        response += '<br>' + msg + '<br>'
 
     if wantSolve['2pl_protocol']:
         res_2pl = solve2PL(sched_parsed, use_xl_only)

@@ -1,6 +1,6 @@
 
 from collections import defaultdict
-from Scheduler import parse_schedule, _sched_malformed_err
+from Scheduler import parseTheSchedule, scheduleMalformed
 
 
 from os.path import isfile
@@ -70,7 +70,7 @@ def solveTimestamps(schedule):
         """
         if op.action_type == 'WRITE':
             written_obj[op.id_transaction].add(op.object)
-        if not Actions.isLastAction:
+        if Actions.isLastAction:
             commit(Actions.id_transaction)
 
     def set_timestamp_data(obj, key, value):
@@ -91,10 +91,10 @@ def solveTimestamps(schedule):
         all_timestamps = [TS(op.action_type) for op in schedule]
         negative_ts = filter(lambda x: x < 0, all_timestamps)
         if len(list(negative_ts)) > 0:
-            err = _sched_malformed_err(
+            err = scheduleMalformed(
                 'Transactions (their timestamps) must be non negative')
     except ValueError:
-        err = _sched_malformed_err(
+        err = scheduleMalformed(
             'Transactions (their timestamps) must be integers')
     finally:
         if err:
@@ -201,8 +201,8 @@ def format_solution(sol):
 
 
 if __name__ == '__main__':
-    schedule = parse_schedule('w1(x)r2(x)w1(y)')
-    # schedule = parse_schedule('')
+    schedule = parseTheSchedule('w1(x)r2(x)w1(y)')
+    # schedule = parseTheSchedule('')
     solution = solveTimestamps(schedule)
     from pprint import pprint
     pprint(solution)
