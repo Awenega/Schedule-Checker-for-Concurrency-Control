@@ -6,6 +6,7 @@ from SolverFor2PL import solve2PL
 from SolverForConflictSerializability import SolveConflictSerializability
 from SolverForTimestamps import solveTimestamps
 from SolverForRecoverable import SolveRecoverability
+from SolverForACR import SolveACR
 from Scheduler import parseTheSchedule
 from ComputePG import ComputePrecedenceGraph
 
@@ -41,7 +42,8 @@ def solve():
         '2pl_protocol': '2pl_protocol' in selected_possibilities,
         'timestamp': 'timestamp' in selected_possibilities,
         'view_serializability': 'view_serializability' in selected_possibilities,
-        'recoverability': 'recoverability' in selected_possibilities
+        'recoverability': 'recoverability' in selected_possibilities,
+        'acr': 'acr' in selected_possibilities
     }
 
     # Initialize the response with the cached HTML page
@@ -99,6 +101,17 @@ def solve():
             msg += ', because transaction T' + \
                 conflict_pair[0] + ' commit before transaction T' + \
                 conflict_pair[1] + '.<br>'
+        response += '<br>' + msg + '<br>'
+
+    if wantSolve['acr']:
+        res_acr, conflict_pair = SolveACR(sched_parsed)
+        msg = '<h4>ACR:</i></h4><br>'
+        msg += 'Is the schedule ACR: <b>' + \
+            str(res_acr) + '</b>'
+        if conflict_pair != None:
+            msg += ', because transaction T' + \
+                conflict_pair[0] + ' read from transaction T' + \
+                conflict_pair[1] + ' that not have commited.<br>'
         response += '<br>' + msg + '<br>'
 
     if wantSolve['2pl_protocol']:
