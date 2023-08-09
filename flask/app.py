@@ -8,6 +8,7 @@ from SolverForTimestamps import solveTimestamps
 from SolverForRecoverable import SolveRecoverability
 from SolverForRigorous import SolveRigorousness
 from SolverForACR import SolveACR
+from SolverForStrict import SolveStrict
 from Scheduler import parseTheSchedule
 from ComputePG import ComputePrecedenceGraph
 
@@ -45,6 +46,7 @@ def solve():
         'view_serializability': 'view_serializability' in selected_possibilities,
         'recoverability': 'recoverability' in selected_possibilities,
         'acr': 'acr' in selected_possibilities,
+        'strict': 'strict' in selected_possibilities,
         'rigorousness': 'rigorousness' in selected_possibilities
     }
 
@@ -116,6 +118,14 @@ def solve():
                 conflict_pair[1] + ' that not have commited.<br>'
         response += '<br>' + msg + '<br>'
 
+    if wantSolve['strict']:
+        res_strict = SolveStrict(sched_parsed)
+        msg = '<h4>Strict:</i></h4><br>'
+        msg += 'Is the schedule Strict: <b>' + \
+            str(res_strict) + '</b>'
+        response += '<br>' + msg + '<br>'
+        # TO-DO: aggiungere motivazione
+
     if wantSolve['2pl_protocol']:
         res_2pl = solve2PL(sched_parsed, use_xl_only)
 
@@ -152,6 +162,7 @@ def solve():
         msg += 'Is the schedule rigorous: <b>' + \
             str(res_rig) + '</b>'
         response += '<br>' + msg + '<br>'
+        # TO-DO: aggiungere motivazione
 
     response_solve = {
         'data': response,
