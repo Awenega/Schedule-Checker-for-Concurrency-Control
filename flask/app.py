@@ -155,7 +155,7 @@ def solve():
         else:
             msg += res_ts['err'] + '<br>'
             response += '<br>' + msg + '<br>'
-    
+
     if wantSolve['rigorousness']:
         res_rig = SolveRigorousness(sched_parsed)
         msg = '<h4>Rigorousness:</i></h4><br>'
@@ -175,9 +175,8 @@ def solve():
 if __name__ == "__main__":
     from os.path import isfile
 
-    debug = isfile('.DEBUG_MODE_ON')
     isEnableDebug = isfile('.DEBUG_MODE_ON')
     if isEnableDebug:
         app.debug = True  # Enable debug mode for auto-reloading
 
-    app.run(port=5000, debug=debug)
+    app.run(port=5000, debug=isEnableDebug)
