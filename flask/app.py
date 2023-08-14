@@ -127,20 +127,11 @@ def solve():
         # TO-DO: aggiungere motivazione
 
     if wantSolve['2pl_protocol']:
-        res_2pl = solve2PL(sched_parsed, use_xl_only)
-
-        # Format results for 2PL
-        msg = '<h4>Two phase lock protocol:</h4><br>'
-        if res_2pl['sol'] is None:
-            msg += res_2pl['err']
-            response += '<br>' + msg + '<br>'
+        solved_schedule, is_strict, is_strong_strict = solve2PL(sched_parsed, use_xl_only)
+        if is_strict is None or is_strong_strict is None:
+            response += '<br><h4>2PL:</h4>' + solved_schedule + '<br>'
         else:
-            msg += """
-            Solution: {} <br>
-            Is the schedule strict-2PL: <i>{}</i> <br>
-            Is the schedule strong strict-2PL: <i>{}</i>
-            """.format(res_2pl['sol'], res_2pl['strict'], res_2pl['strong'])
-            response += '<br>' + msg + '<br>'
+            response += f'<br><h4>2PL:</h4>Solution: {solved_schedule} <br><br>Strict-2PL: <i><strong>{is_strict}</strong></i> <br>Strong-Strict-2PL: <i><strong>{is_strong_strict}</strong></i><br>'
 
     if wantSolve['timestamp']:
         res_ts = solveTimestamps(sched_parsed)
