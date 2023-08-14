@@ -9,6 +9,7 @@ from SolverForRecoverable import SolveRecoverability
 from SolverForRigorous import SolveRigorousness
 from SolverForACR import SolveACR
 from SolverForStrict import SolveStrict
+from SolverForOCSR import solveOCSR
 from Scheduler import parseTheSchedule
 from ComputePG import ComputePrecedenceGraph
 
@@ -47,7 +48,8 @@ def solve():
         'recoverability': 'recoverability' in selected_possibilities,
         'acr': 'acr' in selected_possibilities,
         'strict': 'strict' in selected_possibilities,
-        'rigorousness': 'rigorousness' in selected_possibilities
+        'rigorousness': 'rigorousness' in selected_possibilities,
+        'ocsr': 'ocsr' in selected_possibilities
     }
 
     # Initialize the response with the cached HTML page
@@ -152,6 +154,13 @@ def solve():
         msg = '<h4>Rigorousness:</i></h4><br>'
         msg += 'Is the schedule rigorous: <b>' + \
             str(res_rig) + '</b>'
+        response += '<br>' + msg + '<br>'
+        # TO-DO: aggiungere motivazione
+    
+    if wantSolve['ocsr']:
+        res_ocsr, motivation = solveOCSR(sched_parsed)
+        msg = '<h4>OCSR:</i></h4>'
+        msg += f'Is the schedule OCSR: <b><strong>{res_ocsr}</strong></b> {motivation}'
         response += '<br>' + msg + '<br>'
         # TO-DO: aggiungere motivazione
 
