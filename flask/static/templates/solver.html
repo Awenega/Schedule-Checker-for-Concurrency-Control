@@ -38,6 +38,45 @@
       <i class="fa-solid fa-book icon-of-page"></i>
       Instruction
     </button>
+    <button
+      type="button"
+      class="btn btn-default px-3 sapienza-button history"
+      id="history_button"
+    >
+      <i class="fa-solid fa-clock-rotate-left icon-of-page"></i>
+      History
+    </button>
+
+    <div id="popupContainer" class="popup-container">
+      <div class="popup">
+        <div class="popup-close">
+          <button
+            id="empty_button"
+            type="button"
+            class="btn btn-default px-3 sapienza-button button-trash"
+          >
+            <i class="fa-solid fa-trash icon-trash"></i>
+            Empty
+          </button>
+          <button
+            type="button"
+            class="btn btn-default px-3 sapienza-button"
+            id="close_button"
+          >
+            <i class="fa-solid fa-xmark icon-close"></i>
+            Close
+          </button>
+        </div>
+        <div class="title-popup">
+          <h2>History of schedules:</h2>
+        </div>
+        <div class="listSchedules" id="list_schedules">
+          <div class="pastSchedule">
+            <p class="textPastSchedule">No schedule submitted!</p>
+          </div>
+        </div>
+      </div>
+    </div>
     <div class="container center-container">
       <div class="form-container">
         <h2 class="text-center pb-4">Transaction Checker</h2>
@@ -52,7 +91,6 @@
               placeholder="Enter a schedule..."
             />
           </div>
-          <!-- Add checkboxes for each possibility -->
           <div class="form-group pb-4">
             <label><b>Choose Possibilities:</b></label
             ><br />

@@ -1,32 +1,27 @@
-
 from collections import defaultdict
 from Scheduler import parseTheSchedule, scheduleMalformed
 
+rts = dict()
+wts = dict()
+wts_c = dict()
+cb = dict()
 
-from os.path import isfile
-DEBUG = isfile('.DEBUG')
-
-
-def debug(*args):
-    msg = ''
-    for arg in args:
-        msg += str(arg)+' '
-    if DEBUG:
-        print(msg)
+RTS = 'RTS'
+WTS = 'WTS'
+WTS_C = 'WTS-C'
+CB = 'CB'
 
 
-# WORK IN PROGRESS
+def SolveTimestamps(schedule):
 
-
-def solveTimestamps(schedule):
-    """
-    Returns true of false whether the schedule is serializable through timestamps
-    """
-
-    # timestamps information for each object
-    # indices of the dummy_entry array where the timestamp information is stored
     RTS, WTS, WTS_C, CB = 'RTS', 'WTS', 'WTS_C', 'CB'
-    # dummy entry, all entries initialized like this
+    for action in schedule:
+        if action.object not in rts:
+            rts[action.object] = 0
+            wts[action.object] = 0
+            wts_c[action.object] = 0
+            cb[action.object] = True
+
     dummy_entry = {RTS: -1, WTS: -1, WTS_C: -1, CB: 1}
     timestamps_data = {op.object: dummy_entry.copy() for op in schedule}
 
@@ -203,6 +198,6 @@ def format_solution(sol):
 if __name__ == '__main__':
     schedule = parseTheSchedule('w1(x)r2(x)w1(y)')
     # schedule = parseTheSchedule('')
-    solution = solveTimestamps(schedule)
+    solution = SolveTimestamps(schedule)
     from pprint import pprint
     pprint(solution)

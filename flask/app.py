@@ -4,7 +4,7 @@ from flask import Flask, jsonify, request, render_template
 from SolverForViewSerializability import SolveViewSerializability
 from SolverFor2PL import solve2PL
 from SolverForConflictSerializability import SolveConflictSerializability
-from SolverForTimestamps import solveTimestamps
+from SolverForTimestamps import SolveTimestamps
 from SolverForRecoverable import SolveRecoverability
 from SolverForRigorous import SolveRigorousness
 from SolverForACR import SolveACR
@@ -63,9 +63,8 @@ def solve():
         empty_schedule = '<br>' + 'Empty schedule!' + '<br>'
         return empty_schedule
 
-    # Parse the input schedule to extract transactions and operations
     sched_parsed = parseTheSchedule(schedule)
-    print(sched_parsed)
+    # print(sched_parsed)
 
     if type(sched_parsed) == str:  # Parsing error message
         errors_in_schedule = '<br>' + 'Parsing error: ' + sched_parsed + '<br>'
@@ -143,7 +142,7 @@ def solve():
             response += '<br>' + msg + '<br>'
 
     if wantSolve['timestamp']:
-        res_ts = solveTimestamps(sched_parsed)
+        res_ts = SolveTimestamps(sched_parsed)
         # Format results for timestamps
         msg = '<h4>Timestamps (DRAFT):</h4><br>'
         if res_ts['err'] is None:
@@ -166,7 +165,8 @@ def solve():
 
     response_solve = {
         'data': response,
-        'precedence_graph': precedence_graph
+        'precedence_graph': precedence_graph,
+        'schedule': schedule
     }
 
     return jsonify(response_solve)

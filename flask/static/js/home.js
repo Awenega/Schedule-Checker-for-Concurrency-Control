@@ -23,6 +23,7 @@ function submitForm(event) {
         }
         else if (data.precedence_graph == null) {
             var responseData = data.data;
+
             // Precedence graph not available in the JSON data
             // Append the response data to the response container
             $("#response-container").append("<div class='response'>" + responseData + "</div>");
@@ -35,9 +36,7 @@ function submitForm(event) {
 
             // Update button states after receiving the response
             updateButtonStates();
-            return;
         } else {
-            // Extract the response data and precedence graph from the JSON data
             var responseData = data.data;
             var precedenceGraph = data.precedence_graph;
 
@@ -56,6 +55,21 @@ function submitForm(event) {
             // Display the precedence graph using d3.js
             drawPrecedenceGraph(precedenceGraph);
         }
+
+        var schedulesJson = localStorage.getItem("schedules") || [];
+        if (schedulesJson.length !== 0) {
+            console.log()
+            var schedulesList = JSON.parse(schedulesJson);
+        } else {
+            var schedulesList = schedulesJson;
+        }
+
+        var schedule = data.schedule;
+        schedulesList.unshift(schedule);
+
+        var updatedSchedulesJson = JSON.stringify(schedulesList);
+
+        localStorage.setItem("schedules", updatedSchedulesJson);
     });
 }
 
@@ -85,6 +99,12 @@ $(document).ready(function () {
         }
     );
 
+    $("#empty_button").click(function () {
+        localStorage.removeItem('schedules');
+        $("#list_schedules").html("No schedule submitted!");
+    }
+    );
+
     // Add event listener to checkboxes
     $("input[name='possibility']").on("change", function () {
         // Check if any checkbox is checked
@@ -103,6 +123,45 @@ $(document).ready(function () {
         $("#precedence-graph-container").empty();
         // Update button states after clearing the response
         updateButtonStates();
+    });
+
+    $("#history_button").click(function () {
+        var schedulesJson = localStorage.getItem("schedules") || [];
+        if (schedulesJson.length !== 0) {
+            $("#list_schedules").html("");
+            var schedulesList = JSON.parse(schedulesJson);
+            var listSchedules = $("#list_schedules")
+            var i = 0;
+            schedulesList.forEach(function (value) {
+                const div = $("<div>").addClass("pastSchedule");
+                const p = $("<p>").addClass("textPastSchedule").text(value).attr("id", "Schedule" + i);
+                div.append(p);
+
+                const divInner = $("<div>").addClass("copy-button-container");
+
+                const button = $("<button>").attr("id", "copy_button " + i).addClass("btn btn-default px-3 sapienza-button copy-button");
+                button.on("click", function () {
+                    copyValue(this.id.split(" ")[1]);
+                });
+
+                const icon = $("<i>").addClass("fa-solid fa-copy icon-of-page");
+                button.append(icon);
+                divInner.append(button);
+                div.append(divInner);
+
+                i++;
+
+                listSchedules.append(div);
+            });
+        } else {
+            $("#list_schedules").html("No schedule submitted!");
+        }
+        $("#popupContainer").css("display", "flex");
+    });
+
+    $("#close_button").click(function () {
+        $("#popupContainer").css("display", "none");
+        $("#list_schedules").html("");
     });
 
     // Handle Instruction button click
@@ -203,4 +262,22 @@ function drawPrecedenceGraph(precedenceGraph) {
     } else {
         $("#precedence-graph-container").append("<p>There are no conflicting actions, the Precedence graph is empty!")
     }
+}
+
+function copyValue(value) {
+    var textToCopy = $("#Schedule" + value).text();
+
+    // Create a temporary textarea element to hold the text
+    var tempTextArea = $("<textarea>");
+    tempTextArea.val(textToCopy);
+    $("body").append(tempTextArea);
+
+    // Select and copy the text from the temporary textarea
+    tempTextArea.select();
+    document.execCommand("copy");
+
+    // Remove the temporary textarea
+    tempTextArea.remove();
+
+    alert("Text copied to clipboard: " + textToCopy);
 }
