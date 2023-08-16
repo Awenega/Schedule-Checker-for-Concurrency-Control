@@ -1,262 +1,217 @@
-
-import itertools
-import sys
-
 from Scheduler import formatSchedule
 from Actions import Action
 
+states = {}
+schedule = []
+transactions = []
+x_unlocks = []
+unlocks = []
+locks = []
+use_xl_only = False
 
-def solve2PL(schedule, use_xl_only):
+# Setup transactions and objects variables
+def get_all_transactons_and_objects(schedule):
+    transaction = []
+    objects = []
+    for action in schedule:
+        if action.id_transaction not in transaction:
+            transaction.append(action.id_transaction)
+        if action.object not in objects:
+            objects.append(action.object)
+    return transaction, objects
 
-    print(schedule, use_xl_only, file=sys.stderr)
+# Represents if an object is available for locking/unlocking by the transaction. Values: 'BEGIN', 'sl', 'xl', 'u'
+def setup_initial_states(transactions, objects):
+    states = {}
+    for transaction in transactions:
+        if transaction not in states:
+            states[transaction] = {}
+        for object in objects:
+            states[transaction][object] = 'BEGIN'
+    return states
 
-    # initialize set of transactions and objects
-    transactions = set([op.id_transaction for op in schedule])
-    objects = set([op.object for op in schedule])
+# Setup initial unlocks variables
+def setup_initial_unlocks(transactions):
+    x_unlocks = {} # true when the transaction has unlock the first exclusive lock
+    unlocks = {} # true when the transaction has unlock the first lock (both shared or exclusive)
+    for transaction in transactions:
+        x_unlocks[transaction] = False
+        unlocks[transaction] = False
+    return x_unlocks, unlocks
 
-    # states[transaction][object] = state of object from the perspective of transaction (number of states = |transactions|x|objects|)
-    # a state can be 'START', 'SHARED_LOCK', 'XCLUSIVE_L', 'UNLOCKED'
-    states = {tx: {o: 'START' for o in objects} for tx in transactions}
+# Store lock/unlock actions. An array [] for every transaction i in the schedule, +1 to add unlocks actions at the end
+def setup_locks(schedule):
+    ret = []
+    for i in range(len(schedule)+1):
+        ret.append([])
+    return ret
 
-    # state of the transaction, if it is in the growing or shrinking phase (#locks)
-    transaction_state = {tx: 'GROWING' for tx in transactions}
+# Given a 'state', it returns all the transactions with the object 'obj' in the state 'state' 
+def getTransactionsToUnlock(transactions, states, type_of_unlock_needed, obj, currentTransaction):
+    transaction_to_unlock = []
+    for type_of_unlock in type_of_unlock_needed:
+        ret_unlock = []
+        for transaction in transactions:
+            if states[transaction][obj] == type_of_unlock:
+                ret_unlock.append(transaction)
+        transaction_to_unlock.append(ret_unlock)
+    ret = mergeUnlocks(transaction_to_unlock, currentTransaction)
+    return ret
 
-    # flags that check if the schedule is 2PL-strict
-    # set to true when the transaction unlocks the first exclusive lock
-    has_x_unlocked = {tx: False for tx in transactions}
-    # set to false if any transaction has xunlocked but after performs another action
-    is_strict = True
+# Returns a list with all the transactions having unlocks to be done(both shared and exlusive) on the same object, without the currentTransaction
+def mergeUnlocks(transaction_to_unlock, currentTransaction):
+    final_to_unlock_list = []
+    for to_unlock_list in transaction_to_unlock:
+        for transaction in to_unlock_list:
+            if transaction not in final_to_unlock_list and transaction != currentTransaction:
+                final_to_unlock_list.append(transaction)
+    return final_to_unlock_list
 
-    # flags that check if the schedule is strong 2PL-strict
-    # set to true when the transaction unlocks the first lock, shared or excl.
-    has_unlocked = {tx: False for tx in transactions}
-    # set to false if any transaction unlocks any lock but after performs another action
-    is_strong_strict = True
+# Return lists of object that the currentTransaction will read or write in future
+def get_object_to_read_and_write(remaining_schedule, currentTransaction):
+    to_read = []
+    to_write = []
+    to_read_only = []
+    # get to_write objects (for them we need the exclusive lock)
+    for action in remaining_schedule:
+        if action.id_transaction == currentTransaction and action.action_type == 'READ':  
+            to_read.append(action.object)
+        elif action.id_transaction == currentTransaction and action.action_type == 'WRITE':
+            to_write.append(action.object)
 
-    # output list storing lock/unlock actions.
-    # for every transaction i in the schedule, execute locks[i] before schedule[i]
-    # +1 to add unlocks actions at the end
-    locks = [[] for i in range(len(schedule)+1)]
+    # get to_read_only objects (for them we only need the shared lock, not the exlusive)
+    for elem in to_read:
+        if elem not in to_write:
+            to_read_only.append(elem)
+    return to_read_only, to_write
 
-    def lock(target, trans, obj):
-        """
-        Returns an action object representing the lock action 'target' on 'obj' by 'trans'
-        """
-        if target != 'SHARED_LOCK' and target != 'XCLUSIVE_L' and target != 'UNLOCKED':
-            raise ValueError('Invalid lock/unlock action')
-        return Action(target, trans, obj)
+# Unlock 'obj' for transaction 'currentTransaction'. We look in the future and check if, before unlocking an object, we need to acquire other locks.
+def unlock(currentTransaction, obj, i):
 
-    def merge_locks(locks, schedule):
-        """
-        Returns schedule obtained merging 'schedule' with 'locks'.
-        locks is a list of list, is defined as:
-                for every transaction i in the schedule, execute locks inside locks[i] before schedule[i]
-        """
-        sol = []
-        for locks_i, op in zip(locks, schedule):
-            sol.extend(locks_i + [op])
-        sol.extend(locks[len(schedule)])  # add final unlocks
-        return sol
+    # The object is already unlocked or the transaction has just begun.
+    if states[currentTransaction][obj] == 'u' or states[currentTransaction][obj] == 'BEGIN':
+        return
 
-    def toState(target, trans, obj, i):
-        """
-        Takes care of transitioning 'obj' of 'trans' to state 'target', adding the corresponding
-        lock or unlock action to the solution list and checking whether the change of state is legal and feasible
-        """
-        if target != 'START' and target != 'SHARED_LOCK' and target != 'XCLUSIVE_L' and target != 'UNLOCKED':
-            raise ValueError('Bad target state')
+    # We need to scan only the remaining schedule
+    remaining_schedule = schedule[i+1:]
 
-        # If the user requested to use only excl. locks then use excl locks instead of shared ones
-        if use_xl_only and target == 'SHARED_LOCK':
-            target = 'XCLUSIVE_L'
+    # to_read_only contains objects that in the future will be readed-only by the transaction 'currentTransaction'. In this case we need only a shared lock
+    # to_write contains objects that in the future will be written by the transaction 'currentTransaction'. In this case we need an exclusive lock
+    to_read_only, to_write = get_object_to_read_and_write(remaining_schedule, currentTransaction)
 
-        if states[trans][obj] == target:  # already in target state, do nothing
-            return
+    # for each object, we check if possible to acquire an exclusive lock ('xl'). 
+    for obj_to_lock in to_write:
+        ret = manageLocksAndState('xl', currentTransaction, obj_to_lock, i)
+        if ret:
+            return ret # Not 2PL
 
-        if target == 'SHARED_LOCK':
-            # Before gathering shared lock on 'obj', I've to unlock other transactions
-            # that have 'obj' in exclusive lock
-            while True:  # need to update to_unlock every time in case of side effects of unlock
-                to_unlock = getTransactionsByState('XCLUSIVE_L', obj)
-                to_unlock.discard(trans)  # don't unlock myself
-                if len(to_unlock) == 0:
-                    break
-                err = unlock(to_unlock.pop(), obj, i)
-                if err:
-                    return err  # if here, unfeasible
+    # for each object, we check if possible to acquire a shared lock ('sl'). 
+    for obj_to_lock in (to_read_only):
+        ret = manageLocksAndState('sl', currentTransaction, obj_to_lock, i)
+        if ret:
+            return ret # Not 2PL
 
-        if target == 'XCLUSIVE_L':
-            # Before gathering exlcusive lock on 'obj', I've to unlock other transactions
-            # that have 'obj' in shared or exclusive lock
-            while True:  # need to update to_unlock every time in case of side effects of unlock
-                to_unlock_xl = getTransactionsByState('XCLUSIVE_L', obj)
-                to_unlock_sl = getTransactionsByState('SHARED_LOCK', obj)
-                to_unlock = set.union(to_unlock_xl, to_unlock_sl)
-                to_unlock.discard(trans)  # don't unlock myself
-                if len(to_unlock) == 0:
-                    break
-                err = unlock(to_unlock.pop(), obj, i)
-                if err:
-                    return err  # if here, unfeasible
+    # After all locks acquired, we can unlock the object 'obj' by the transaction 'currentTransaction'
+    manageLocksAndState('u', currentTransaction, obj, i)
 
-        if transaction_state[trans] == 'SHRINKING' and target != 'UNLOCKED':
-            return unfeasible('while processing '+str(schedule[i])+', tansaction '+trans+' has to acquire a lock, ' +
-                              'but it has already performed an unlock action.', i)
+# Change the state of an 'obj' of 'transaction' to state 'target', adding the corresponding lock/unlock actions to solution list, and check if it is feasible.
+def manageLocksAndState(target, currentTransaction, obj, i):
+    
+    if use_xl_only and target == 'sl':
+        target = 'xl'
 
-        if target == 'UNLOCKED':
-            transaction_state[trans] = 'SHRINKING'
+    if states[currentTransaction][obj] == target:
+        return
+    
+    #if I want to do a shared lock, first I need to unlock the object from the transaction that has an exclusive lock
+    #if I want to do a exclusive lock, then I need to unlock the object from the transaction that has any type of lock
+    type_of_unlock_needed = ['xl'] if target == 'sl' else ['xl', 'sl']
 
-        # strictness: check if the schedule unlocks an exclusive lock
-        if states[trans][obj] == 'XCLUSIVE_L' and target == 'UNLOCKED':
-            has_x_unlocked[trans] = True
-
-        # strong strictness: check if the schedule unlocks any lock
-        if (states[trans][obj] == 'XCLUSIVE_L' or states[trans][obj] == 'SHARED_LOCK') and target == 'UNLOCKED':
-            has_unlocked[trans] = True
-
-        states[trans][obj] = target  # set target state
-        # add the (un)lock action to the solution
-        locks[i].append(lock(target, trans, obj))
-
-    def unlock(trans, obj, i):
-        """ Unlock 'obj' for transaction 'trans'.
-        Before unlocking it, it must acquire ALL future locks that it
-        will need in the future, because once something gets unlocked, 'trans' can no longer acquire
-        locks. So it will look in the future actions of 'trans', searching for read
-        and write actions on any object: on the matching objects, it will acquire an 
-        exclusive lock if 'trans' performs at least one write action, or, if there are only
-        reads, a shared lock. After acquiring those locks finally the lock on 'obj' is released.
-        """
-        if states[trans][obj] == 'UNLOCKED' or states[trans][obj] == 'START':
-            return
-
-        will_be_read = set()
-        will_be_written = set()
-
-        # look in the future transactions of 'trans', starting from transaction at 'i'+1
-        # for j in range(i+1, len(schedule)):
-        # action = schedule[j]
-        for action in schedule[i+1:]:
-            if action.id_transaction != trans:  # we only need transactions of 'trans'
-                continue
-            if action.action_type == 'READ':
-                will_be_read.add(action.object)
-            elif action.action_type == 'WRITE':
-                will_be_written.add(action.object)
+    if target == 'sl' or target == 'xl':
+        # Unlock transactions holding 'obj' in exclusive or shared lock before obtaining the desidered type of lock
+        while True:
+            transactions_to_unlock = getTransactionsToUnlock(transactions, states, type_of_unlock_needed, obj, currentTransaction)             
+            # Check if there are transactions to unlock 
+            if len(transactions_to_unlock) > 0:
+                # If so, I take the last element in the list and start the unlock process for that object
+                transaction_to_process = transactions_to_unlock.pop()
+                # If the unlock is permitted, I will add the unlock in the locks array at position i
+                ret = unlock(transaction_to_process, obj, i)
+                if ret:
+                    return ret  # Not 2PL
             else:
-                raise ValueError
+                break
 
-        for obj_to_lock in will_be_written:
-            err = toState('XCLUSIVE_L', trans, obj_to_lock, i)
-            if err:
-                return err
+    # strictness: check if the schedule unlocks an exclusive lock
+    if states[currentTransaction][obj] == 'xl' and target == 'u':
+        x_unlocks[currentTransaction] = True
 
-        # if the object will be read and written I have already placed an exlcusive lock on it
-        for obj_to_lock in (will_be_read - will_be_written):
-            err = toState('SHARED_LOCK', trans, obj_to_lock, i)
-            if err:
-                return err
+    # strong strictness: check if the schedule unlocks any lock
+    if (states[currentTransaction][obj] == 'xl' or states[currentTransaction][obj] == 'sl') and target == 'u':
+        unlocks[currentTransaction] = True
 
-        # Now that I have finally acquired all locks that I will need in the future,
-        # 'trans' can unlock 'obj'.
-        toState('UNLOCKED', trans, obj, i)
+    states[currentTransaction][obj] = target  # set target state
+    
+    # add the lock/unlock action to the solution
+    tmp = Action(target, currentTransaction, obj)
+    locks[i].append(tmp)
 
-    # - - -  utlis  - - -
+def solve2PL(schedule, use_xl_only_flag):
+    global transactions
+    global states
+    global x_unlocks
+    global unlocks
+    global locks
+    global use_xl_only
 
-    def getTransactionsByState(state, obj):
-        """
-        returns the set of transactions having object 'obj' in state 'state'
-        """
-        trans = filter(lambda tx: states[tx][obj] == state, transactions)
-        return set(trans)
-
-    def put_final_unlocks():
-        """
-        Unlocks the all the resources in use at the end of the schedule
-        """
-        for trans, obj in itertools.product(transactions, objects):
-            state = states[trans][obj]
-            if state == 'SHARED_LOCK' or state == 'XCLUSIVE_L':
-                toState('UNLOCKED', trans, obj, len(schedule))
-
-    def unfeasible(details, i):
-        s = 'The schedule is not in 2PL'
-        if details is None:
-            s += '!'
-        else:
-            s += ': '+details
-
-        s1 = '\nPartial lock sequence: '
-        if not i is None:
-            sol = merge_locks(locks, schedule)
-            offset = i + sum(map(lambda x: len(x), locks))
-            s1 += formatSchedule(sol[:offset])
-
-        return {'sol': None, 'partial_locks': s1, 'err': s}
-
-    # - - - -  main  - - - -
-
+    ## SETUP VARIABLES ##
+    use_xl_only = use_xl_only_flag
+    transactions, objects = get_all_transactons_and_objects(schedule)
+    states = setup_initial_states(transactions, objects)
+    x_unlocks, unlocks = setup_initial_unlocks(transactions)
+    is_strict, is_strong_strict = True, True
+    locks = setup_locks(schedule)
+    
+    ## MAIN ##
     for i in range(len(schedule)):
+        
         action = schedule[i]
+        obj_state = states[action.id_transaction][action.object]          
 
-        obj_state = states[action.id_transaction][action.object]
-
-        # If a tx has unlocked an exclusive lock and executes another action, then the whole schedule is not strict
-        if has_x_unlocked[action.id_transaction]:
+        if x_unlocks[action.id_transaction]: #The transaction has unlocked an exclusive lock and executes another action
             is_strict = False
-
-        # If a tx has unlocked any lock and executes another action, then the whole schedule is not strong strict
-        if has_unlocked[action.id_transaction]:
+        elif unlocks[action.id_transaction]: #The transaction has unlocked a lock and executes another action
             is_strong_strict = False
 
-        if action.action_type == 'READ':
+        # READ operation needs to get share lock
+        if action.action_type == 'READ' and obj_state == 'BEGIN':
+            ret = manageLocksAndState('sl', action.id_transaction, action.object, i)
+            if ret:
+                return ret # Not 2PL
+        elif action.action_type == 'READ' and obj_state == 'u': #the action is trying to read from an unlocked object.
+            return f'Not 2PL: <strong>{action}</strong> is trying to read from an unlocked object', None, None
 
-            if obj_state == 'START':
-                err = toState(
-                    'SHARED_LOCK', action.id_transaction, action.object, i)
-                if err:
-                    return err
+        # WRITE operation needs to get exclusive lock
+        if action.action_type == 'WRITE' and (obj_state == 'BEGIN' or obj_state == 'sl'):
+            err = manageLocksAndState('xl', action.id_transaction, action.object, i)
+            if err:
+                return err
+        elif action.action_type == 'WRITE' and obj_state == 'u': #the action is trying to write to an unlocked object
+                return f'Not 2PL: <strong>{action}</strong> is trying to write to an unlocked object', None, None
 
-            elif obj_state == 'SHARED_LOCK':  # ok, can continue to read
-                pass
+    # Unlocks all the resources in use at the end of the schedule
+    for currentTransaction in transactions:
+            for obj in objects:
+                state = states[currentTransaction][obj]
+                if state == 'sl' or state == 'xl':
+                    manageLocksAndState('u', currentTransaction, obj, len(schedule))
+    
+    # get the final schedule with operation and locks/unlocks
+    final_schedule = []
+    for i in range(len(schedule)):
+        final_schedule += locks[i] + [schedule[i]]
+    final_schedule += locks[len(schedule)]
+    final_schedule = formatSchedule(final_schedule)
+    return final_schedule, is_strict, is_strong_strict
 
-            elif obj_state == 'XCLUSIVE_L':  # ok, can continue to read
-                pass
-
-            elif obj_state == 'UNLOCKED':
-                return unfeasible('action '+str(action)+' needs to lock an unlocked object', i)
-
-            else:
-                raise ValueError('Bad state')
-
-        elif action.action_type == 'WRITE':
-
-            if obj_state == 'START' or obj_state == 'SHARED_LOCK':
-                err = toState('XCLUSIVE_L', action.id_transaction,
-                              action.object, i)
-                if err:
-                    return err
-
-            elif obj_state == 'XCLUSIVE_L':  # ok, can continue to write
-                pass
-
-            elif obj_state == 'UNLOCKED':
-                return unfeasible('action '+str(action)+' needs to lock an unlocked object', i)
-
-            else:
-                raise ValueError('Bad state')
-
-        else:
-            raise ValueError('Bad action type')
-
-    put_final_unlocks()  # unlock active locks
-    # merge locks and the schedule
-    solved_schedule = merge_locks(locks, schedule)
-
-    solved_schedule_str = formatSchedule(solved_schedule)
-
-    return {
-        'sol': solved_schedule_str,
-        'strict': str(is_strict),
-        'strong': str(is_strong_strict)
-    }
+#  r1(A)r2(A)r3(B)w1(A)r2(C)r2(B)w2(B)w1(C) Not true if only exlusive lock, True if shared and exclusive locks

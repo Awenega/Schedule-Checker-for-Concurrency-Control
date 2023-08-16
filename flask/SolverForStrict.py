@@ -42,9 +42,9 @@ def check_read_from_committed_transaction(schedule, conflicting_pair, indexes_of
     index_of_commit_of_the_write = indexes_of_commits[write_action.id_transaction]
     index_of_read = schedule.index(read_action)
     if index_of_read < index_of_commit_of_the_write:
-        return False
+        return False, f" because <strong>{read_action}</strong> read from transaction <strong>{write_action}</strong> that has not yet committed"
     else:
-        return True
+        return True, None
 
 def check_write_from_committed_transaction(schedule, conflicting_pair, indexes_of_commits):
     #calcolo posizione nella schedule del commit della transazione che ha fatto l'ultima write sull'oggetto
@@ -55,23 +55,25 @@ def check_write_from_committed_transaction(schedule, conflicting_pair, indexes_o
     index_of_commit_of_the_write_action_2 = indexes_of_commits[write_action_2.id_transaction]
     index_of_write_action_1 = schedule.index(write_action_1)
     if index_of_write_action_1 < index_of_commit_of_the_write_action_2:
-        return False
+        return False, f" because <strong>{write_action_1}</strong> write on transaction <strong>{write_action_2}</strong> that has not yet committed"
     else:
-        return True
+        return True, None
     
 def SolveStrict(schedule):
     indexes_of_commits = get_all_commits(schedule)
     read_from_actions = read_from(schedule)
     write_from_actions = write_from(schedule)
     for conflicting_pair in read_from_actions:
-        read_from_committed_transaction = check_read_from_committed_transaction(schedule, conflicting_pair, indexes_of_commits)
+        read_from_committed_transaction, msg = check_read_from_committed_transaction(schedule, conflicting_pair, indexes_of_commits)
         if read_from_committed_transaction is not True:
-            return False
+            return False, msg
     
     for conflicting_pair in write_from_actions:
-        write_from_committed_transaction = check_write_from_committed_transaction(schedule, conflicting_pair, indexes_of_commits)
+        write_from_committed_transaction, msg = check_write_from_committed_transaction(schedule, conflicting_pair, indexes_of_commits)
         if write_from_committed_transaction is not True:
-            return False
-    return True
+            return False, msg
+    return True, " because every transaction reads-from and writes-on transactions that have already committed"
 
-# w1(A)w2(A)w3(A)w4(A)
+# w1(A)w2(A)w3(A)w4(A) #True because every transaction reads-from and writes-on transactions that have already committed
+# w1(x)r2(x)w1(y) False because r2(x) read from transaction w1(x) that has not yet committed
+# w1(x)r2(x)r3(x)w1(y) False because r2(x) read from transaction w1(x) that has not yet committed

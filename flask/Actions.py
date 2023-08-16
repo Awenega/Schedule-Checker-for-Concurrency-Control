@@ -14,11 +14,11 @@ class Action:
             operationType = 'r'
         elif self.action_type == 'WRITE':
             operationType = 'w'
-        elif self.action_type == 'UNLOCKED':
+        elif self.action_type == 'UNLOCKED' or self.action_type =='u':
             operationType = 'u'
-        elif self.action_type == 'SHARED_LOCK':
+        elif self.action_type == 'SHARED_LOCK' or self.action_type =='sl':
             operationType = 'sl'
-        elif self.action_type == 'EXCLUSIVE_LOCK':
+        elif self.action_type == 'EXCLUSIVE_LOCK' or self.action_type =='xl':
             operationType = 'xl'
         elif self.action_type == 'COMMIT':
             operationType = 'c'
