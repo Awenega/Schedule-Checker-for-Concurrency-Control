@@ -10,6 +10,7 @@ from SolverForRigorous import SolveRigorousness
 from SolverForACR import SolveACR
 from SolverForStrict import SolveStrict
 from SolverForOCSR import solveOCSR
+from SolverForCOCSR import solveCOCSR
 from Scheduler import parseTheSchedule
 from ComputePG import ComputePrecedenceGraph
 
@@ -49,7 +50,8 @@ def solve():
         'acr': 'acr' in selected_possibilities,
         'strict': 'strict' in selected_possibilities,
         'rigorousness': 'rigorousness' in selected_possibilities,
-        'ocsr': 'ocsr' in selected_possibilities
+        'ocsr': 'ocsr' in selected_possibilities,
+        'cocsr': 'cocsr' in selected_possibilities
     }
 
     # Initialize the response with the cached HTML page
@@ -162,7 +164,12 @@ def solve():
         msg = '<h4>OCSR:</i></h4>'
         msg += f'Is the schedule OCSR: <b><strong>{res_ocsr}</strong></b> {motivation}'
         response += '<br>' + msg + '<br>'
-        # TO-DO: aggiungere motivazione
+
+    if wantSolve['cocsr']:
+        res_cocsr, motivation = solveCOCSR(sched_parsed)
+        msg = '<h4>COCSR:</i></h4>'
+        msg += f'Is the schedule COCSR: <b><strong>{res_cocsr}</strong></b> {motivation}'
+        response += '<br>' + msg + '<br>'
 
     response_solve = {
         'data': response,
