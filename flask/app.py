@@ -122,7 +122,8 @@ def solve():
         response += '<br>' + msg + '<br>'
 
     if wantSolve['2pl_protocol']:
-        solved_schedule, is_strict, is_strong_strict = solve2PL(sched_parsed, use_xl_only)
+        solved_schedule, is_strict, is_strong_strict = solve2PL(
+            sched_parsed, use_xl_only)
         if is_strict is None or is_strong_strict is None:
             response += '<br><h4>2PL:</h4>' + solved_schedule + '<br>'
         else:
@@ -132,15 +133,17 @@ def solve():
         res_ts = SolveTimestamps(sched_parsed)
         # Format results for timestamps
         msg = '<h4>Timestamps (DRAFT):</h4><br>'
-        if res_ts['err'] is None:
-            msg += 'List of executed operations: ' + \
-                str(res_ts['sol']) + '<br>'
-            msg += 'List of waiting transactions at the end of schedule: ' + \
-                str(res_ts['waiting_tx']) + '<br>'
-            response += '<br>' + msg + '<br>'
-        else:
-            msg += res_ts['err'] + '<br>'
-            response += '<br>' + msg + '<br>'
+
+        msg += res_ts
+        # if res_ts['err'] is None:
+        #    msg += 'List of executed operations: ' + \
+        #        str(res_ts['sol']) + '<br>'
+        #    msg += 'List of waiting transactions at the end of schedule: ' + \
+        #        str(res_ts['waiting_tx']) + '<br>'
+        #    response += '<br>' + msg + '<br>'
+        # else:
+        #    msg += res_ts['err'] + '<br>'
+        response += '<br>' + msg + '<br>'
 
     if wantSolve['strict']:
         res_strict, motivation = SolveStrict(sched_parsed)
@@ -153,7 +156,7 @@ def solve():
         msg = '<h4>Rigorousness:</i></h4><br>'
         msg += f'Is the schedule Rigorous: <b><strong>{res_rig}</strong></b> {motivation}'
         response += '<br>' + msg + '<br>'
-    
+
     if wantSolve['ocsr']:
         res_ocsr, motivation = solveOCSR(sched_parsed)
         msg = '<h4>OCSR:</i></h4>'

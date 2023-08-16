@@ -1,203 +1,235 @@
 from collections import defaultdict
-from Scheduler import parseTheSchedule, scheduleMalformed
+from Actions import Action
+
 
 rts = dict()
 wts = dict()
 wts_c = dict()
 cb = dict()
-
+timestamps = dict()
+waiting = dict()
+pending_action = []
+rollback = dict()
+write_on = dict()
+last_write = dict()
 RTS = 'RTS'
 WTS = 'WTS'
 WTS_C = 'WTS-C'
 CB = 'CB'
+deadlock = dict()
 
 
 def SolveTimestamps(schedule):
-
-    RTS, WTS, WTS_C, CB = 'RTS', 'WTS', 'WTS_C', 'CB'
+    objects = []
+    transactions = []
     for action in schedule:
-        if action.object not in rts:
+        if action.object not in objects:
             rts[action.object] = 0
             wts[action.object] = 0
             wts_c[action.object] = 0
             cb[action.object] = True
+            last_write[action.object] = None
+            objects.append(action.object)
+        if action.id_transaction not in transactions:
+            waiting[action.id_transaction] = (False, None)
+            rollback[action.id_transaction] = False
+            write_on[action.id_transaction] = set()
+            transactions.append(action.id_transaction)
 
-    dummy_entry = {RTS: -1, WTS: -1, WTS_C: -1, CB: 1}
-    timestamps_data = {op.object: dummy_entry.copy() for op in schedule}
+    formatted_schedule = format_schedule(schedule)
+    deadlock['end'] = False
 
-    # save objects written by each transaction
-    # dict[transaction] = written objects by transaction
-    written_obj = defaultdict(set)
+    solution = 'The initial situation is:<br>'
 
-    # Set of waiting transactions
-    # if 'T' is a waiting transaction, then waiting_tx['T'] is the index of the Actions of 'T' in the schedule where 'T' is blocked
-    waiting_tx = dict()
+    for object in rts:
+        solution += "wts(" + str(object) + ")=" + "wts-c(" + str(object) + ")=" + \
+            "rts(" + str(object) + ")=0 and cb(" + str(object) + ")=True<br>"
 
-    # final solution. Its entries are lists
-    solution = list()
-    solution_entry = list()
+    solution += "<br>The system responds as follows:<br><ul class=\"list-group\">"
 
-    # - - - - Scheduler - - -
+    clock_value = 1
+    for action in formatted_schedule:
+        isFirst = False
+        if deadlock['end']:
+            break
+        elif waiting[action.id_transaction][0]:
+            pending_action.append(action)
+            solution += "<li class=\"list-group-item\">" + str(action) + " --> SKIP: because T" + \
+                action.id_transaction + " is in WAITING state, skipped for now."
+        elif rollback[action.id_transaction]:
+            solution += "<li class=\"list-group-item\">" + str(action) + \
+                " --> SKIP: because T" + action.id_transaction + " has done a rollback before."
+        elif action.action_type == 'READ':
+            if action.id_transaction not in timestamps:
+                isFirst = True
+                timestamps[action.id_transaction] = clock_value
+            solution += read_action(action,
+                                    action.id_transaction, action.object, isFirst)
+        elif action.action_type == 'WRITE':
+            if action.id_transaction not in timestamps:
+                isFirst = True
+                timestamps[action.id_transaction] = clock_value
+            solution += write_action(action,
+                                     action.id_transaction, action.object, isFirst)
+        else:
+            solution += commit_action(action.id_transaction)
+        clock_value += 1
 
-    def commit(tx):
-        """Performs the commit of transaction 'tx'
-        """
-        solution_entry.append('commit')
-        debug('committing', tx)
-        for obj in written_obj[tx]:
-            data = timestamps_data[obj]
-            set_timestamp_data(obj, WTS_C, data[WTS])
-            set_timestamp_data(obj, CB, True)
+    solution += "</ul><br>"
+    return solution
 
-    def rollback(tx):
-        """Performs the rollback of transaction 'tx'
-        """
-        solution_entry.append('rollback')
-        debug('rollbacking', tx)
-        for obj in written_obj[tx]:
-            data = timestamps_data[obj]
-            set_timestamp_data(obj, WTS, data[WTS_C])
-            set_timestamp_data(obj, CB, True)
 
-    def execute(op):
-        """Execute Actions op. Write in the solution its execution and,
-        whether it is the last, the commit of its transaction
-        """
-        if op.action_type == 'WRITE':
-            written_obj[op.id_transaction].add(op.object)
-        if Actions.isLastAction:
-            commit(Actions.id_transaction)
-
-    def set_timestamp_data(obj, key, value):
-        if key != CB and key != WTS and key != WTS_C and key != RTS:
-            raise ValueError
-        timestamps_data[obj][key] = value
-        solution_entry.append(f'{key}({str(obj)})={value}')
-
-    def TS(tx):
-        """Returns the timestamp of a transaction.
-        we ASSUME that timestamp of transaction 'i' is 'i'
-        """
-        return int(tx)
-
-    # sanity check on the timestamps
-    try:
-        err = None
-        all_timestamps = [TS(op.action_type) for op in schedule]
-        negative_ts = filter(lambda x: x < 0, all_timestamps)
-        if len(list(negative_ts)) > 0:
-            err = scheduleMalformed(
-                'Transactions (their timestamps) must be non negative')
-    except ValueError:
-        err = scheduleMalformed(
-            'Transactions (their timestamps) must be integers')
-    finally:
-        if err:
-            return {'err': err}
-
-    # - - - - main - - -
-
-    i = 0
-    while True:
-
-        debug('\nNEW STEP')
-
-        # Fetch new Actions
-
-        # First try to fetch the next Actions if a transaction has been unlocked
-        locking_ops_index = sorted(waiting_tx.values())
-        for i_lock in locking_ops_index:
-            obj = schedule[i_lock].object
-            # if the commit bit of an object, waited by some transaction, becomes true then fetch the Actions
-            if timestamps_data[obj][CB] == True:
-                Actions = schedule[i_lock]
-                waiting_tx.pop(Actions.id_transaction)
-                solution_entry.append(
-                    f'resume {str(Actions.id_transaction)}')
-                break
-
-        else:  # no waiting Actions, go on with the schedule
-            if i >= len(schedule):
-                # If here, there are no waiting Actions and the schedule is empty, can return solution
-                # return solution
-                return {'err': None, 'sol': format_solution(solution), 'waiting_tx': waiting_tx}
-
-            Actions = schedule[i]
-            debug('Picked Actions from schedule', Actions)
-            # Check if transaction of the Actions is in wait, if so skip it
-            tx = Actions.id_transaction
-            if tx in waiting_tx:
-                debug('Transaction is in waiting', Actions)
-                i += 1
-                continue
-
-        # Now we have fetched the next Actions, execute it
-        debug('executing Actions', Actions)
-
-        # New entry that will be populated and pushed into the solution
-        solution_entry.append(str(Actions))
-
-        transaction = Actions.id_transaction
-        obj = Actions.object
-        ts_obj = timestamps_data[obj]
-
-        if Actions.id_transaction == 'READ':
-            if TS(transaction) >= ts_obj[WTS]:
-                if ts_obj[CB] or TS(transaction) == ts_obj[WTS]:
-                    set_timestamp_data(obj, RTS, max(
-                        TS(transaction), ts_obj[RTS]))
-                    execute(Actions)
-                else:
-                    debug('put Actions in wait', Actions)
-                    waiting_tx[transaction] = i
-                    solution_entry.append('Wait')
-            else:
-                rollback(transaction)
-
-        elif Actions.id_transaction == 'WRITE':
-            if TS(transaction) >= ts_obj[RTS] and TS(transaction) >= ts_obj[WTS]:
-                if ts_obj[CB]:
-                    set_timestamp_data(obj, WTS, TS(transaction))
-                    set_timestamp_data(obj, CB, False)
-                    execute(Actions)
-                else:
-                    debug('put Actions in wait', Actions)
-                    waiting_tx[transaction] = i
-                    solution_entry.append('Wait')
-            else:
-                if TS(transaction) >= ts_obj[RTS] and TS(transaction) < ts_obj[WTS]:
-                    if ts_obj[CB]:
-                        solution_entry.append('Ignored (Thomas rule)')
-                    else:
-                        debug('put Actions in wait', Actions)
-                        waiting_tx[transaction] = i
-                        solution_entry.append('Wait')
-                else:
-                    rollback(transaction)
+def read_action(action, transaction_id, object, isFirst):
+    if timestamps[transaction_id] >= wts[object]:
+        if cb[object] or timestamps[transaction_id] == wts[object]:
+            rts[object] = max(timestamps[transaction_id], rts[object])
+            action_solution = "<li class=\"list-group-item\">" + \
+                str(action) + " --> ok --> "
+            if isFirst:
+                action_solution += "ts(T" + str(transaction_id) + ")=" + \
+                    str(timestamps[transaction_id]) + ", "
+            action_solution += "rts(" + str(object) + ")=" + str(rts[object])
 
         else:
-            raise ValueError('Bad Actions type')
+            waiting[transaction_id] = (True, object)
+            pending_action.append(action)
+            if not waiting[last_write[object]][0]:
+                action_solution = "<li class=\"list-group-item\">" + \
+                    str(action) + " --> no: T" + \
+                    str(transaction_id) + " must WAIT"
+                if isFirst:
+                    action_solution += " and ts(T" + str(transaction_id) + \
+                        ")=" + str(timestamps[transaction_id])
+            else:
+                action_solution = "<li class=\"list-group-item\">" + \
+                    str(action) + " --> no: T" + \
+                    str(transaction_id) + " DEADLOCK"
+                deadlock['end'] = True
 
-        i += 1  # update schedule index
-        # append data to solution
-        solution.append(solution_entry.copy())
-        solution_entry.clear()
+    else:
+        action_solution = rollback_action(action, transaction_id, isFirst)
+
+    return action_solution
 
 
-def format_solution(sol):
-    # s = '<table><tr><th><b>Action</b></th><th><b>Action</b></th></tr>'
-    s = '<table>'
-    for action in sol:
-        s += f'<tr><td>{action[0]}</td><td>'  # action[0] is the Actions
-        for op in action[1:]:
-            s += op + ' '
-        s += '</td></tr>'
-    return s + '</table>'
+def write_action(action, transaction_id, object, isFirst):
+    if timestamps[transaction_id] >= rts[object] and timestamps[transaction_id] >= wts[object]:
+        if cb[object]:
+            set_of_objects = write_on.get(transaction_id)
+            set_of_objects.add(object)
+            write_on[transaction_id] = set_of_objects
+
+            wts[object] = timestamps[transaction_id]
+            cb[object] = False
+            last_write[action.object] = transaction_id
+
+            action_solution = "<li class=\"list-group-item\">" + \
+                str(action) + " --> ok --> "
+            if isFirst:
+                action_solution += "ts(T" + str(transaction_id) + ")=" + \
+                    str(timestamps[transaction_id]) + ", "
+            action_solution += "wts(" + str(object) + ")=" + \
+                str(timestamps[transaction_id]) + \
+                " and cb(" + str(object) + ")=False"
+
+        else:
+            waiting[transaction_id] = (True, object)
+            pending_action.append(action)
+            if not waiting[last_write[object]][0]:
+                action_solution = "<li class=\"list-group-item\">" + \
+                    str(action) + " --> no: T" + \
+                    str(transaction_id) + " must WAIT"
+                if isFirst:
+                    action_solution += " and ts(T" + str(transaction_id) + \
+                        ")=" + str(timestamps[transaction_id])
+            else:
+                action_solution = "<li class=\"list-group-item\">" + \
+                    str(action) + " --> no: T" + \
+                    str(transaction_id) + " DEADLOCK"
+                deadlock['end'] = True
+
+    else:
+        if timestamps[transaction_id] >= rts[object] and timestamps[transaction_id] < wts[object]:
+            if cb[object]:
+                action_solution = "<li class=\"list-group-item\">" + str(action) + \
+                    " --> SKIP: the action has been skipped for the THOMAS RULE"
+                if isFirst:
+                    action_solution += " and ts(T" + str(transaction_id) + \
+                        ")=" + str(timestamps[transaction_id])
+
+            else:
+                waiting[transaction_id] = (True, object)
+                pending_action.append(action)
+                if not waiting[last_write[object]][0]:
+                    action_solution = "<li class=\"list-group-item\">" + \
+                        str(action) + " --> no: T" + \
+                        str(transaction_id) + " must WAIT"
+                    if isFirst:
+                        action_solution += " and ts(T" + str(transaction_id) + \
+                            ")=" + str(timestamps[transaction_id])
+                else:
+                    action_solution = "<li class=\"list-group-item\">" + \
+                        str(action) + " --> no: T" + \
+                        str(transaction_id) + " DEADLOCK"
+                    deadlock['end'] = True
+
+        else:
+            action_solution = rollback_action(action, transaction_id, isFirst)
+    return action_solution
 
 
-if __name__ == '__main__':
-    schedule = parseTheSchedule('w1(x)r2(x)w1(y)')
-    # schedule = parseTheSchedule('')
-    solution = SolveTimestamps(schedule)
-    from pprint import pprint
-    pprint(solution)
+def commit_action(transaction_id):
+    set_of_objects = write_on.get(transaction_id)
+    action_solution = "<li class=\"list-group-item\">" + \
+        "c" + str(transaction_id) + " --> COMMIT: "
+    for object in set_of_objects:
+        action_solution += "cb(" + str(object) + ")=True, wts_c(" + \
+            object + ")=" + str(timestamps[transaction_id]) + ", "
+        cb[object] = True
+        wts_c[object] = timestamps[transaction_id]
+        for transaction in waiting:
+            if waiting[transaction][0] and waiting[transaction][1] == object:
+                # PROCEDE
+                print("OK")
+
+    return action_solution
+
+
+def rollback_action(action, transaction_id, isFirst):
+    set_of_objects = write_on.get(transaction_id)
+    action_solution = "<li class=\"list-group-item\">" + str(action) + \
+        " --> no: Rollback of T" + \
+        str(transaction_id) + ", after the action set: "
+    for object in set_of_objects:
+        wts[object] = wts_c.get(object)
+        cb[object] = True
+        action_solution += "cb(" + str(object) + ")=True, wts(" + \
+            object + ")=" + str(wts_c.get(object)) + ", "
+        for transaction in waiting:
+            if waiting[transaction][0] and waiting[transaction][1] == object:
+                # proced
+                print("ok")
+    if isFirst:
+        action_solution += " and ts(T" + str(transaction_id) + ")=" + \
+            timestamps[transaction_id]
+
+    rollback[transaction_id] = True
+    return action_solution
+
+
+def format_schedule(schedule):
+    formatted_schedule = []
+    commitedTransactions = set()
+    for action in schedule:
+        if action.action_type == 'COMMIT':
+            commitedTransactions.add(action.id_transaction)
+
+    for action in schedule:
+        if action.isLastAction and not (action.id_transaction in commitedTransactions):
+            formatted_schedule.append(action)
+            current_action = 'COMMIT'
+            ActionCurrent = Action(current_action, action.id_transaction, None)
+            formatted_schedule.append(ActionCurrent)
+        else:
+            formatted_schedule.append(action)
+    return formatted_schedule
