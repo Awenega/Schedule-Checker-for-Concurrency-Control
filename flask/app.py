@@ -122,14 +122,6 @@ def solve():
                 conflict_pair[1] + ' that not have commited.<br>'
         response += '<br>' + msg + '<br>'
 
-    if wantSolve['strict']:
-        res_strict = SolveStrict(sched_parsed)
-        msg = '<h4>Strict:</i></h4><br>'
-        msg += 'Is the schedule Strict: <b>' + \
-            str(res_strict) + '</b>'
-        response += '<br>' + msg + '<br>'
-        # TO-DO: aggiungere motivazione
-
     if wantSolve['2pl_protocol']:
         solved_schedule, is_strict, is_strong_strict = solve2PL(sched_parsed, use_xl_only)
         if is_strict is None or is_strong_strict is None:
@@ -151,13 +143,17 @@ def solve():
             msg += res_ts['err'] + '<br>'
             response += '<br>' + msg + '<br>'
 
-    if wantSolve['rigorousness']:
-        res_rig = SolveRigorousness(sched_parsed)
-        msg = '<h4>Rigorousness:</i></h4><br>'
-        msg += 'Is the schedule rigorous: <b>' + \
-            str(res_rig) + '</b>'
+    if wantSolve['strict']:
+        res_strict, motivation = SolveStrict(sched_parsed)
+        msg = '<h4>Strict:</i></h4><br>'
+        msg += f'Is the schedule Strict: <b><strong>{res_strict}</strong></b> {motivation}'
         response += '<br>' + msg + '<br>'
-        # TO-DO: aggiungere motivazione
+
+    if wantSolve['rigorousness']:
+        res_rig, motivation = SolveRigorousness(sched_parsed)
+        msg = '<h4>Rigorousness:</i></h4><br>'
+        msg += f'Is the schedule Rigorous: <b><strong>{res_rig}</strong></b> {motivation}'
+        response += '<br>' + msg + '<br>'
     
     if wantSolve['ocsr']:
         res_ocsr, motivation = solveOCSR(sched_parsed)
