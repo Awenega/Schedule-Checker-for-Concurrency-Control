@@ -22,6 +22,7 @@ deadlock = dict()
 def SolveTimestamps(schedule):
     objects = []
     transactions = []
+    pending_action = []
     for action in schedule:
         if action.object not in objects:
             rts[action.object] = 0
@@ -189,8 +190,8 @@ def commit_action(transaction_id):
         wts_c[object] = timestamps[transaction_id]
         for transaction in waiting:
             if waiting[transaction][0] and waiting[transaction][1] == object:
-                # PROCEDE
-                print("OK")
+                waiting[transaction] = (False, None)
+                action_solution += handle_pending_actions()
 
     return action_solution
 
@@ -207,8 +208,8 @@ def rollback_action(action, transaction_id, isFirst):
             object + ")=" + str(wts_c.get(object)) + ", "
         for transaction in waiting:
             if waiting[transaction][0] and waiting[transaction][1] == object:
-                # proced
-                print("ok")
+                waiting[transaction] = (False, None)
+                action_solution += handle_pending_actions()
     if isFirst:
         action_solution += " and ts(T" + str(transaction_id) + ")=" + \
             timestamps[transaction_id]
@@ -233,3 +234,29 @@ def format_schedule(schedule):
         else:
             formatted_schedule.append(action)
     return formatted_schedule
+
+
+def handle_pending_actions():
+    actions_solution = ""
+    for action in pending_action:
+        isFirst = False
+        if deadlock['end']:
+            break
+        elif waiting[action.id_transaction][0]:
+            continue
+        elif rollback[action.id_transaction]:
+            actions_solution += "<li class=\"list-group-item\">" + str(action) + \
+                " --> SKIP: because T" + action.id_transaction + " has done a rollback before."
+        elif action.action_type == 'READ':
+            actions_solution += read_action(action,
+                                            action.id_transaction, action.object, isFirst)
+        elif action.action_type == 'WRITE':
+            actions_solution += write_action(action,
+                                             action.id_transaction, action.object, isFirst)
+        else:
+            actions_solution += commit_action(action.id_transaction)
+    return actions_solution
+
+# r1(A)w2(A)c2r3(B)w3(A)w1(A)c3r1(B) HANDLE WAITING and THOMAS RULE
+# r1(B)w1(A)w2(B)w1(B)r2(A) DEADLOCK
+# r1(A)r2(B)r3(A)r2(A)w1(A)w3(A)
