@@ -27,8 +27,8 @@ if want active flask debug mode add in flask folder .DEBUG_MODE_ON empty file, o
 
 ## Report
 
-TODO
+### [Click here to see the report](https://drive.google.com/file/d/1iMp9yERiNgKdTXjQED4f3yBOYOjN4mNH/view?usp=drive_link)
 
-## Browsers
+## Final Product
 
-We **recommend** you to play the game on Chrome.
+### [Click here to use the webapp](https://transaction-checker-sie6.onrender.com/)
