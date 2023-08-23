@@ -12,8 +12,8 @@ Francesco Sudoso, matricola: 1808353
 ## How to run in local enviroment:
 
 ```
-git clone https://github.com/Pancio-code/Project-Data-Management.git
-cd Project-Data-Management/flask/
+git clone https://github.com/Schedule-checker-for-concurrency-control.git
+cd Schedule-checker-for-concurrency-control/flask/
 
 In the terminal write:
 
